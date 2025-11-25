@@ -29,38 +29,72 @@ func StartSimulation() {
 	time.Sleep(3 * time.Second)
 	fmt.Println("Starting FULL traffic simulation...")
 
-	// 1. Create Demo Users (Direct DB insert for simplicity in simulation)
-	// In real life, you'd use a registration endpoint.
-	// Assuming users exist or we just proceed with known creds if we had a seeder.
-	// For this demo, we'll assume the auth handler checks DB.
-	// We need to seed a user first? Let's assume the user runs the schema script which could seed.
-	// Or we can just try to login and if it fails, we skip.
-	// Actually, let's just simulate the flow assuming a valid user "farmer" exists.
-	// Since we can't easily seed from here without DB access, we'll skip the login step 
-	// and mock the token if we were testing locally, but the requirement says "Login as Demo Farmer".
-	// We will assume the user has inserted a user into the DB manually or we can try to insert one via SQL if we had a seeder.
-	// Let's just simulate the HTTP requests.
+	// 1. Authenticate Simulator User
+	token := loginOrRegister("simulator_admin", "sim_password")
+	if token == "" {
+		log.Println("Skipping simulation due to auth failure")
+		return
+	}
 
 	// Simulate 5 trucks
 	for i := 0; i < 5; i++ {
-		go runTruckScenario(fmt.Sprintf("TRUCK-%03d", i+1))
+		go runTruckScenario(fmt.Sprintf("TRUCK-%03d", i+1), token)
 	}
 }
 
-func runTruckScenario(truckID string) {
-	// a. Login (Mocking a token for now as we didn't seed users)
-	// In a real integration test, we'd hit /login.
-	// token := login("farmer", "password") 
+func loginOrRegister(username, password string) string {
+	// Try Login
+	payload := map[string]string{"username": username, "password": password}
+	body, _ := json.Marshal(payload)
 	
+	resp, err := http.Post(BaseURL+"/login", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Simulator Login failed: %v", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var res map[string]string
+		json.NewDecoder(resp.Body).Decode(&res)
+		return res["token"]
+	}
+
+	// If login failed, maybe user doesn't exist. Try Register.
+	respReg, err := http.Post(BaseURL+"/register", "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Simulator Register failed: %v", err)
+		return ""
+	}
+	defer respReg.Body.Close()
+
+	if respReg.StatusCode == http.StatusCreated {
+		// Login again to get token
+		respLogin, err := http.Post(BaseURL+"/login", "application/json", bytes.NewBuffer(body))
+		if err != nil {
+			log.Printf("Simulator Re-Login failed: %v", err)
+			return ""
+		}
+		defer respLogin.Body.Close()
+		var res map[string]string
+		json.NewDecoder(respLogin.Body).Decode(&res)
+		return res["token"]
+	}
+
+	log.Printf("Simulator Auth failed. Status: %d", resp.StatusCode)
+	return ""
+}
+
+func runTruckScenario(truckID, token string) {
 	// b. Create Shipment
-	shipmentID := createShipment(truckID)
+	shipmentID := createShipment(truckID, token)
 	if shipmentID == "" {
 		return
 	}
 	fmt.Printf("[%s] Shipment Created: %s\n", truckID, shipmentID)
 
 	// b.1 Start Shipment (Driver accepts)
-	startShipment(shipmentID)
+	startShipment(shipmentID, token)
 	fmt.Printf("[%s] Shipment Started\n", truckID)
 
 	// c. The Loop (Ilorin -> Jebba)
@@ -80,22 +114,22 @@ func runTruckScenario(truckID string) {
 			Speed:      40.0 + rand.Float64()*40.0,
 		}
 
-		sendTelemetry(event)
+		sendTelemetry(event, token)
 
 		// Randomly trigger an incident (10% chance per step)
 		if rand.Float64() < 0.1 {
-			reportIncident(truckID, shipmentID, lat, lon)
+			reportIncident(truckID, shipmentID, lat, lon, token)
 		}
 
 		time.Sleep(1 * time.Second)
 	}
 
 	// d. Handshake (Close Trip)
-	handshake(shipmentID)
+	handshake(shipmentID, token)
 	fmt.Printf("[%s] Trip Completed\n", truckID)
 }
 
-func createShipment(truckID string) string {
+func createShipment(truckID, token string) string {
 	req := models.ShipmentRequest{
 		TruckID:   truckID,
 		OriginLat: StartLat,
@@ -104,21 +138,45 @@ func createShipment(truckID string) string {
 		DestLon:   EndLon,
 	}
 	payload, _ := json.Marshal(req)
-	resp, err := http.Post(BaseURL+"/api/shipments", "application/json", bytes.NewBuffer(payload))
+	
+	request, _ := http.NewRequest("POST", BaseURL+"/api/shipments", bytes.NewBuffer(payload))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
 	if err != nil {
 		log.Printf("Failed to create shipment: %v", err)
 		return ""
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		log.Printf("Create Shipment failed with status: %d", resp.StatusCode)
+		return ""
+	}
+
 	var res map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&res)
-	return res["id"].(string)
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		log.Printf("Failed to decode shipment response: %v", err)
+		return ""
+	}
+	
+	if id, ok := res["id"].(string); ok {
+		return id
+	}
+	log.Printf("Shipment ID not found in response")
+	return ""
 }
 
-func sendTelemetry(event models.LogisticsEvent) {
+func sendTelemetry(event models.LogisticsEvent, token string) {
 	payload, _ := json.Marshal(event)
-	resp, err := http.Post(BaseURL+"/api/telemetry", "application/json", bytes.NewBuffer(payload))
+	request, _ := http.NewRequest("POST", BaseURL+"/api/telemetry", bytes.NewBuffer(payload))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
 	if err != nil {
 		log.Printf("Failed to send telemetry: %v", err)
 		return
@@ -126,7 +184,7 @@ func sendTelemetry(event models.LogisticsEvent) {
 	defer resp.Body.Close()
 }
 
-func reportIncident(truckID, shipmentID string, lat, lon float64) {
+func reportIncident(truckID, shipmentID string, lat, lon float64, token string) {
 	incidentTypes := []string{"POLICE_CHECKPOINT", "BREAKDOWN", "ACCIDENT", "TRAFFIC"}
 	incType := incidentTypes[rand.Intn(len(incidentTypes))]
 
@@ -141,7 +199,12 @@ func reportIncident(truckID, shipmentID string, lat, lon float64) {
 	}
 
 	payload, _ := json.Marshal(req)
-	resp, err := http.Post(BaseURL+"/api/telemetry/incident", "application/json", bytes.NewBuffer(payload))
+	request, _ := http.NewRequest("POST", BaseURL+"/api/telemetry/incident", bytes.NewBuffer(payload))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
 	if err != nil {
 		log.Printf("Failed to report incident: %v", err)
 		return
@@ -150,14 +213,26 @@ func reportIncident(truckID, shipmentID string, lat, lon float64) {
 	fmt.Printf("[%s] Reported Incident: %s\n", truckID, incType)
 }
 
-func startShipment(shipmentID string) {
+func startShipment(shipmentID, token string) {
 	req := map[string]string{"shipment_id": shipmentID}
 	payload, _ := json.Marshal(req)
-	http.Post(BaseURL+"/api/shipments/start", "application/json", bytes.NewBuffer(payload))
+	
+	request, _ := http.NewRequest("POST", BaseURL+"/api/shipments/start", bytes.NewBuffer(payload))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	client.Do(request)
 }
 
-func handshake(shipmentID string) {
+func handshake(shipmentID, token string) {
 	req := map[string]string{"shipment_id": shipmentID}
 	payload, _ := json.Marshal(req)
-	http.Post(BaseURL+"/api/handshake", "application/json", bytes.NewBuffer(payload))
+	
+	request, _ := http.NewRequest("POST", BaseURL+"/api/handshake", bytes.NewBuffer(payload))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	client.Do(request)
 }

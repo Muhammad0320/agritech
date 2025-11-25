@@ -152,6 +152,20 @@ func InitDB(pool *pgxpool.Pool) error {
 		return fmt.Errorf("failed to create materialized view: %v", err)
 	}
 
+	// 5. Seed Data (For Demo/Simulator)
+	seedQueries := []string{
+		`INSERT INTO trucks (id, driver_name, plate_number) VALUES ('TRUCK-001', 'Driver 1', 'LAG-001') ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO trucks (id, driver_name, plate_number) VALUES ('TRUCK-002', 'Driver 2', 'LAG-002') ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO trucks (id, driver_name, plate_number) VALUES ('TRUCK-003', 'Driver 3', 'LAG-003') ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO trucks (id, driver_name, plate_number) VALUES ('TRUCK-004', 'Driver 4', 'LAG-004') ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO trucks (id, driver_name, plate_number) VALUES ('TRUCK-005', 'Driver 5', 'LAG-005') ON CONFLICT (id) DO NOTHING;`,
+	}
+	for _, query := range seedQueries {
+		if _, err := pool.Exec(ctx, query); err != nil {
+			return fmt.Errorf("failed to seed data: %v", err)
+		}
+	}
+
 	fmt.Println("Database schema initialized successfully ✅")
 	return nil
 }
