@@ -13,6 +13,8 @@ export async function startTripAction(formData: FormData) {
     throw new Error("Missing Truck ID");
   }
 
+  console.log(truckId, "--------------- ?? ------")
+
   try {
     // 1. Create Shipment
     // Using dummy coordinates for demo purposes (Lagos to Abuja approx)
