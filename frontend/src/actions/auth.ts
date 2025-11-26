@@ -26,7 +26,7 @@ export async function loginAction(formData: FormData) {
     const cookieStore = await cookies();
     cookieStore.set("token", response.token, { 
       httpOnly: true, 
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 30 // 30 days
     });
     cookieStore.set("is_authenticated", "true", { maxAge: 60 * 60 * 24 * 30 });

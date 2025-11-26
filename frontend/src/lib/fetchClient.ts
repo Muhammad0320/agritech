@@ -39,9 +39,13 @@ async function getAuthToken() {
 export async function fetchClient<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { headers, ...rest } = options;
 
+  // Check if Auth header is already provided (case-insensitive check)
+  const hasAuthHeader = headers && Object.keys(headers).some(k => k.toLowerCase() === 'authorization');
+
   // Ensure we have a token for protected endpoints
   // We skip auth for login/register to avoid infinite loops
-  if (!endpoint.includes('/login') && !endpoint.includes('/register')) {
+  // We also skip if the caller provided their own token (e.g. from Server Actions)
+  if (!hasAuthHeader && !endpoint.includes('/login') && !endpoint.includes('/register')) {
       await getAuthToken();
   }
 
@@ -53,6 +57,10 @@ export async function fetchClient<T>(endpoint: string, options: FetchOptions = {
       ...headers,
     },
   };
+
+  // Debug Log
+  const authHeader = (config.headers as Record<string, string>)['Authorization'];
+  console.log(`[fetchClient] ${endpoint} - Auth Header:`, authHeader ? "PRESENT" : "MISSING");
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
 

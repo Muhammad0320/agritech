@@ -94,13 +94,14 @@ func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 		return
 	}
 
+
 	// Get Truck ID from authenticated context
 	truckID := c.GetString("user_id")
 	if truckID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-
+	
 	// Ensure the truck exists in the trucks table (Auto-register if missing to prevent FK error)
 	// In a real app, we would have a separate registration flow for trucks.
 	// For this demo, we assume the user ID is the truck ID.
