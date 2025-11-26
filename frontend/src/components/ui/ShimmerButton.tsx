@@ -17,7 +17,7 @@ interface ButtonProps {
   $variant?: 'primary' | 'danger' | 'neutral';
 }
 
-const StyledButton = styled.button<ButtonProps>`
+const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
   width: 100%;
   padding: 16px;
   border: none;
@@ -38,7 +38,7 @@ const StyledButton = styled.button<ButtonProps>`
   };
 
   /* Loading State */
-  ${({ isLoading }) => isLoading && css`
+  ${({ $isLoading }) => $isLoading && css`
     cursor: not-allowed;
     background: linear-gradient(
       45deg,
@@ -52,11 +52,11 @@ const StyledButton = styled.button<ButtonProps>`
   `}
 
   &:active {
-    transform: ${({ isLoading }) => isLoading ? 'none' : 'scale(0.98)'};
+    transform: ${({ $isLoading }) => $isLoading ? 'none' : 'scale(0.98)'};
   }
 
   &:disabled {
-    opacity: ${({ isLoading }) => isLoading ? 1 : 0.7};
+    opacity: ${({ $isLoading }) => $isLoading ? 1 : 0.7};
     cursor: not-allowed;
   }
 `;
@@ -68,7 +68,7 @@ export default function ShimmerButton({
   ...props 
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & ButtonProps) {
   return (
-    <StyledButton isLoading={isLoading} disabled={isLoading || props.disabled} {...props}>
+    <StyledButton $isLoading={isLoading} disabled={isLoading || props.disabled} {...props}>
       {isLoading ? loadingText : children}
     </StyledButton>
   );
