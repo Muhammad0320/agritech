@@ -15,9 +15,15 @@ import (
 
 	// "agri-track/internal/simulator"
 
+	"math/rand"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	// Load .env file

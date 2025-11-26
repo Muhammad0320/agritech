@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -28,9 +29,10 @@ func (h *ShipmentHandler) CreateShipment(c *gin.Context) {
 	fmt.Println("Reached here? ------------------------")
 
 	id := uuid.New().String()
-	// Generate 6-digit pickup code (simple implementation)
-	pickupCode := fmt.Sprintf("AG-%03d", time.Now().Nanosecond()%1000) // Simple demo code
+	// Generate 6-digit pickup code
+	pickupCode := fmt.Sprintf("AG-%06d", rand.Intn(1000000))
 	fmt.Println(pickupCode, "---------------------")
+	
 	_, err := db.Pool.Exec(c.Request.Context(), `
 		INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code)
 		VALUES ($1, $2, $3, $4, $5, $6, 'CREATED', $7)

@@ -131,7 +131,7 @@ func runTruckScenario(truckID, token string) {
 
 func createShipment(truckID, token string) string {
 	req := models.ShipmentRequest{
-		TruckID:   truckID,
+		TruckID:   &truckID,
 		OriginLat: StartLat,
 		OriginLon: StartLon,
 		DestLat:   EndLat,

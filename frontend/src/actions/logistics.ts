@@ -5,23 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-export async function startTripAction(formData: FormData) {
-  const truckId = formData.get("truckId") as string;
-  // We ignore the client-generated shipmentId and let the backend create one
-  
-  if (!truckId) {
-    throw new Error("Missing Truck ID");
-  }
-
-  console.log(truckId, "--------------- ?? ------")
-
+export async function createShipmentAction() {
   try {
     // 1. Create Shipment
     // Using dummy coordinates for demo purposes (Lagos to Abuja approx)
     const createRes = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
       method: "POST",
       body: JSON.stringify({
-        truck_id: truckId, // Ensure this ID exists in DB or use "PENDING" if allowed
+        // truck_id is now optional/omitted
         origin_lat: 6.5244,
         origin_lon: 3.3792,
         dest_lat: 9.0765,
@@ -31,33 +22,22 @@ export async function startTripAction(formData: FormData) {
 
     const { id: newShipmentId, pickup_code } = createRes;
 
-    // 2. Start Shipment - REMOVED
-    // We now return the pickup code so the driver/farmer can perform the handshake.
-    // Auto-starting invalidates the pickup code flow.
-    /*
-    await fetchClient("/api/shipments/start", {
-      method: "POST",
-      body: JSON.stringify({ shipment_id: newShipmentId }),
-    });
-    */
-
-    // Save state to cookie for persistence (Optional, maybe wait for pickup?)
-    // const cookieStore = await cookies();
-    // cookieStore.set("active_shipment", newShipmentId);
-    // cookieStore.set("active_truck", truckId);
+    // Save state to cookie for persistence (Optional)
+    const cookieStore = await cookies();
+    cookieStore.set("active_shipment", newShipmentId);
 
     return { success: true, shipmentId: newShipmentId, pickupCode: pickup_code };
 
   } catch (error: any) {
-    console.error("Failed to start trip:", error);
+    console.error("Failed to create shipment:", error);
     if (error.message) {
         console.error("Error Message:", error.message);
     }
-    throw new Error(`Failed to start trip: ${error.message || "Unknown error"}`);
+    throw new Error(`Failed to create shipment: ${error.message || "Unknown error"}`);
   }
 }
 
-export async function pickupShipmentAction(pickupCode: string) {
+export async function joinShipmentAction(pickupCode: string) {
   const cookieStore = await cookies();
   const truckId = cookieStore.get("active_truck")?.value || "TRUCK-001"; // Default if missing
 
@@ -75,7 +55,7 @@ export async function pickupShipmentAction(pickupCode: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to pickup shipment:", error);
+    console.error("Failed to join shipment:", error);
     throw error;
   }
 }
