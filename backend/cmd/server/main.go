@@ -4,6 +4,22 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"agri-track/internal/db"
+	"agri-track/internal/handlers"
+	"agri-track/internal/middleware"
+
+	// "agri-track/internal/simulator"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+)
+
+func main() {
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
