@@ -126,6 +126,12 @@ func InitDB(pool *pgxpool.Pool) error {
 		return fmt.Errorf("failed to make truck_id nullable: %v", err)
 	}
 
+	// Ensure started_at column exists
+	_, err = pool.Exec(ctx, "ALTER TABLE shipments ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;")
+	if err != nil {
+		return fmt.Errorf("failed to add started_at column: %v", err)
+	}
+
 	// 3. Convert to Hypertable (Conditional)
 	// Check if hypertable exists to avoid error
 	var exists bool

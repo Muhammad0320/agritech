@@ -22,6 +22,7 @@ func NewShipmentHandler() *ShipmentHandler {
 func (h *ShipmentHandler) CreateShipment(c *gin.Context) {
 	var req models.ShipmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		
 		c.JSON(http.StatusBadRequest, formatValidationError(err))
 		return
 	}
@@ -92,25 +93,55 @@ func (h *ShipmentHandler) Handshake(c *gin.Context) {
 func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 	var req struct {
 		PickupCode string `json:"pickup_code" binding:"required"`
-		TruckID    string `json:"truck_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, formatValidationError(err))
 		return
 	}
 
-	var shipmentID string
-	err := db.Pool.QueryRow(c.Request.Context(), `
-		UPDATE shipments 
-		SET status='IN_TRANSIT', truck_id=$1 
-		WHERE pickup_code=$2 AND status='CREATED'
-		RETURNING id
-	`, req.TruckID, req.PickupCode).Scan(&shipmentID)
-
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid pickup code or shipment not available"})
+	// Get Truck ID from authenticated context
+	truckID := c.GetString("user_id")
+	if truckID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "IN_TRANSIT", "shipment_id": shipmentID})
+	// Ensure the truck exists in the trucks table (Auto-register if missing to prevent FK error)
+	// In a real app, we would have a separate registration flow for trucks.
+	// For this demo, we assume the user ID is the truck ID.
+	_, err := db.Pool.Exec(c.Request.Context(), `
+		INSERT INTO trucks (id, driver_name, plate_number) 
+		VALUES ($1, 'Driver ' || $1, 'LAG-' || SUBSTRING($1, 1, 4))
+		ON CONFLICT (id) DO NOTHING
+	`, truckID)
+	if err != nil {
+		fmt.Println("Failed to auto-register truck:", err)
+		// Continue anyway, maybe it exists?
+	}
+
+	var shipmentID string
+	err = db.Pool.QueryRow(c.Request.Context(), `
+		UPDATE shipments 
+		SET status='IN_TRANSIT', truck_id=$1, started_at=NOW()
+		WHERE pickup_code=$2 AND status='CREATED'
+		RETURNING id
+	`, truckID, req.PickupCode).Scan(&shipmentID)
+
+	if err != nil {
+		// Check if it was a "not found" or "conflict" (already taken)
+		// Simple check: query if code exists at all
+		var status string
+		checkErr := db.Pool.QueryRow(c.Request.Context(), "SELECT status FROM shipments WHERE pickup_code=$1", req.PickupCode).Scan(&status)
+		
+		if checkErr != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Invalid pickup code"})
+		} else if status != "CREATED" {
+			c.JSON(http.StatusConflict, gin.H{"error": "Shipment already taken or completed"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to pickup shipment"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "shipment_id": shipmentID})
 }

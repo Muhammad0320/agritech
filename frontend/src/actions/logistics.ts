@@ -39,24 +39,30 @@ export async function createShipmentAction() {
 
 export async function joinShipmentAction(pickupCode: string) {
   const cookieStore = await cookies();
-  const truckId = cookieStore.get("active_truck")?.value || "TRUCK-001"; // Default if missing
-
+  // truck_id is now handled by the backend via the auth token
+  
   try {
-    const response = await fetchClient<{ shipment_id: string }>("/api/shipments/pickup", {
+    const response = await fetchClient<{ success: boolean, shipment_id: string }>("/api/shipments/pickup", {
       method: "POST",
       body: JSON.stringify({ 
-        pickup_code: pickupCode,
-        truck_id: truckId
+        pickup_code: pickupCode
       }),
     });
 
-    cookieStore.set("active_shipment", response.shipment_id);
-    cookieStore.set("active_truck", truckId);
+    if (response.success) {
+        cookieStore.set("active_shipment", response.shipment_id);
+        // We assume the backend used the authenticated user's ID as the truck ID
+        // We can't easily get it back here without another call, but for the UI state:
+        cookieStore.set("active_truck", "ME"); 
+        
+        revalidatePath("/driver");
+        return { success: true };
+    }
+    return { success: false, error: "Failed to join" };
 
-    return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to join shipment:", error);
-    throw error;
+    return { success: false, error: error.message || "Failed to join shipment" };
   }
 }
 

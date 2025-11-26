@@ -216,11 +216,13 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
     setLoading(true);
 
     try {
-      await joinShipmentAction(pickupCode);
-      toast.success("Shipment Picked Up!");
-      setTripStarted(true);
-      // Optional: Reload to sync server state if needed, but local state update is faster
-      // window.location.reload(); 
+      const result = await joinShipmentAction(pickupCode);
+      if (result.success) {
+        toast.success("Shipment Picked Up!");
+        setTripStarted(true);
+      } else {
+        toast.error(result.error || "Failed to pickup shipment");
+      }
     } catch (error) {
       toast.error("Failed to pickup shipment");
     } finally {
