@@ -27,66 +27,50 @@ const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
   font-weight: 600;
   color: white;
   cursor: pointer;
-  background: transparent; /* We use ::after for the background */
+  background: transparent;
   overflow: hidden;
   z-index: 0;
   transition: transform 0.2s;
-  height: 56px; /* Fixed height to match inputs */
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
 
-  /* --- THE TRAVELING BORDER (Loading State) --- */
+  /* --- THE SPINNER (::before) --- */
+  /* Only visible when loading */
   ${({ $isLoading }) => $isLoading && css`
-    cursor: not-allowed;
+    cursor: wait;
     
-    /* The Spinning Light */
     &::before {
       content: '';
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 400%; /* Large enough to cover corners */
-      height: 400%;
-      background: conic-gradient(
-        from 0deg, 
-        transparent 0%, 
-        transparent 20%, 
-        #10b981 50%, 
-        transparent 80%
-      );
-      animation: ${spin} 2s linear infinite;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(from 0deg, transparent 0 340deg, #10b981 360deg);
+      animation: ${spin} 3s linear infinite;
       z-index: -2;
     }
   `}
 
-  /* --- THE INNER BACKGROUND (Solid Slate) --- */
+  /* --- THE MASK / BACKPLATE (::after) --- */
   &::after {
     content: '';
     position: absolute;
-    inset: 2px; /* Creates the border width */
-    background: ${({ $variant }) => 
-      $variant === 'danger' ? '#dc2626' :
-      $variant === 'neutral' ? '#334155' :
-      '#0f172a' /* Dark Slate for Primary */
-    };
-    
-    /* If NOT loading, we might want a solid gradient or color. 
-       But the user specifically asked for this effect for ShimmerButton.
-       Let's make the non-loading state look good too. */
-    background: ${({ $isLoading, $variant }) => 
-      $isLoading ? '#0f172a' : /* Dark center when loading to show border */
+    inset: 3px; /* Defines border thickness */
+    background: ${({ $variant, $isLoading }) => 
+      $isLoading ? '#1e293b' : /* Dark Slate when loading to show border */
       $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
       $variant === 'neutral' ? '#334155' :
       'linear-gradient(135deg, #10b981 0%, #059669 100%)'
     };
-
-    border-radius: 10px; /* slightly less than parent */
+    border-radius: 10px; /* Matches button radius */
     z-index: -1;
     transition: background 0.3s;
   }
 
-  /* Text Layer */
+  /* --- CONTENT LAYER --- */
   span {
     position: relative;
     z-index: 1;
@@ -98,7 +82,7 @@ const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
 
   &:disabled {
     opacity: ${({ $isLoading }) => $isLoading ? 1 : 0.7};
-    cursor: ${({ $isLoading }) => $isLoading ? 'not-allowed' : 'not-allowed'};
+    cursor: ${({ $isLoading }) => $isLoading ? 'wait' : 'not-allowed'};
   }
 `;
 
