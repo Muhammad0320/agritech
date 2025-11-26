@@ -189,6 +189,7 @@ export default function AuthCard() {
           <Select value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="DEPOT_MANAGER">Depot Manager</option>
             <option value="DRIVER">Driver</option>
+            <option value="FARMER">Farmer</option>
           </Select>
         </InputGroup>
 

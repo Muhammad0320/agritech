@@ -61,6 +61,7 @@ func main() {
 	api.Use(middleware.AuthMiddleware())
 	{
 		api.POST("/shipments", shipmentHandler.CreateShipment)
+		api.POST("/shipments/pickup", shipmentHandler.PickupShipment)
 		api.POST("/shipments/start", shipmentHandler.StartShipment)
 		api.POST("/handshake", shipmentHandler.Handshake)
 		api.POST("/telemetry", telemetryHandler.ReceiveTelemetry)

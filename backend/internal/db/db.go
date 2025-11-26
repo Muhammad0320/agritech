@@ -81,7 +81,8 @@ func InitDB(pool *pgxpool.Pool) error {
 			dest_lon DOUBLE PRECISION NOT NULL,
 			status TEXT NOT NULL, -- 'CREATED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'
 			created_at TIMESTAMPTZ DEFAULT NOW(),
-			completed_at TIMESTAMPTZ
+			completed_at TIMESTAMPTZ,
+			pickup_code TEXT
 		);`,
 		// Logistics events table (Hypertable candidate)
 		`CREATE TABLE IF NOT EXISTS logistics_events (
@@ -111,6 +112,12 @@ func InitDB(pool *pgxpool.Pool) error {
 		if _, err := pool.Exec(ctx, query); err != nil {
 			return fmt.Errorf("failed to execute query %q: %v", query, err)
 		}
+	}
+
+	// Ensure pickup_code column exists (migration for existing tables)
+	_, err = pool.Exec(ctx, "ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_code TEXT;")
+	if err != nil {
+		return fmt.Errorf("failed to add pickup_code column: %v", err)
 	}
 
 	// 3. Convert to Hypertable (Conditional)

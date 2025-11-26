@@ -65,6 +65,7 @@ type Shipment struct {
 	DestLat     float64    `json:"dest_lat"`
 	DestLon     float64    `json:"dest_lon"`
 	Status      string     `json:"status"`
+	PickupCode  string     `json:"pickup_code"`
 	CreatedAt   time.Time  `json:"created_at"`
 	CompletedAt *time.Time `json:"completed_at"`
 }
@@ -72,6 +73,7 @@ type Shipment struct {
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	Role     string `json:"role"` // Optional for login, required/used for register
 }
 
 type ShipmentRequest struct {

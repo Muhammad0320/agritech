@@ -24,12 +24,16 @@ export async function loginAction(formData: FormData) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set("token", response.token, { httpOnly: true, secure: true });
-    cookieStore.set("is_authenticated", "true");
+    cookieStore.set("token", response.token, { 
+      httpOnly: true, 
+      secure: true,
+      maxAge: 60 * 60 * 24 * 30 // 30 days
+    });
+    cookieStore.set("is_authenticated", "true", { maxAge: 60 * 60 * 24 * 30 });
     
     // If backend returns role, use it. Otherwise use the one from form (less secure but works for redirect)
     const userRole = response.role || role;
-    cookieStore.set("user_role", userRole);
+    cookieStore.set("user_role", userRole, { maxAge: 60 * 60 * 24 * 30 });
 
     return { success: true, role: userRole };
   } catch (error: any) {

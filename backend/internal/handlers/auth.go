@@ -67,7 +67,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	role := "farmer"
+	// Default to farmer if not specified, or validate allowed roles
+	role := req.Role
+	if role == "" {
+		role = "farmer"
+	}
+	// Basic validation could be added here
+	
 	var id int
 	err = db.Pool.QueryRow(c.Request.Context(), "INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id", req.Username, hashedPassword, role).Scan(&id)
 

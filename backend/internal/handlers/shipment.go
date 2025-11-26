@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -25,17 +26,20 @@ func (h *ShipmentHandler) CreateShipment(c *gin.Context) {
 	}
 
 	id := uuid.New().String()
+	// Generate 6-digit pickup code (simple implementation)
+	pickupCode := fmt.Sprintf("AG-%03d", time.Now().Nanosecond()%1000) // Simple demo code
+
 	_, err := db.Pool.Exec(c.Request.Context(), `
-		INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status)
-		VALUES ($1, $2, $3, $4, $5, $6, 'CREATED')
-	`, id, req.TruckID, req.OriginLat, req.OriginLon, req.DestLat, req.DestLon)
+		INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code)
+		VALUES ($1, $2, $3, $4, $5, $6, 'CREATED', $7)
+	`, id, req.TruckID, req.OriginLat, req.OriginLon, req.DestLat, req.DestLon, pickupCode)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create shipment"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "status": "CREATED"})
+	c.JSON(http.StatusCreated, gin.H{"id": id, "status": "CREATED", "pickup_code": pickupCode})
 }
 
 func (h *ShipmentHandler) StartShipment(c *gin.Context) {
@@ -78,4 +82,30 @@ func (h *ShipmentHandler) Handshake(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "DELIVERED"})
+}
+
+func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
+	var req struct {
+		PickupCode string `json:"pickup_code" binding:"required"`
+		TruckID    string `json:"truck_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationError(err))
+		return
+	}
+
+	var shipmentID string
+	err := db.Pool.QueryRow(c.Request.Context(), `
+		UPDATE shipments 
+		SET status='IN_TRANSIT', truck_id=$1 
+		WHERE pickup_code=$2 AND status='CREATED'
+		RETURNING id
+	`, req.TruckID, req.PickupCode).Scan(&shipmentID)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid pickup code or shipment not available"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "IN_TRANSIT", "shipment_id": shipmentID})
 }

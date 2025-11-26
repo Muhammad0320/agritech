@@ -51,6 +51,29 @@ export async function startTripAction(formData: FormData) {
   }
 }
 
+export async function pickupShipmentAction(pickupCode: string) {
+  const cookieStore = await cookies();
+  const truckId = cookieStore.get("active_truck")?.value || "TRUCK-001"; // Default if missing
+
+  try {
+    const response = await fetchClient<{ shipment_id: string }>("/api/shipments/pickup", {
+      method: "POST",
+      body: JSON.stringify({ 
+        pickup_code: pickupCode,
+        truck_id: truckId
+      }),
+    });
+
+    cookieStore.set("active_shipment", response.shipment_id);
+    cookieStore.set("active_truck", truckId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to pickup shipment:", error);
+    throw error;
+  }
+}
+
 export async function reportIncidentAction(lat: number, lng: number, type: string, description: string) {
   const cookieStore = await cookies();
   const truckId = cookieStore.get("active_truck")?.value || "unknown_truck";
