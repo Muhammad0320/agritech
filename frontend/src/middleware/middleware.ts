@@ -6,45 +6,47 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Public paths
+  // 1. Redirect authenticated users away from Login/Public pages
   if (pathname === '/' || pathname === '/login' || pathname === '/register') {
     if (token) {
-      // If authenticated, redirect to appropriate dashboard
       try {
         const decoded: any = jwtDecode(token);
-        const role = decoded.role?.toLowerCase();
+        const role = decoded.role?.toUpperCase(); // Force Uppercase to match DB Enums
+
+        if (role === 'DRIVER') return NextResponse.redirect(new URL('/driver', request.url));
+        if (role === 'FARMER') return NextResponse.redirect(new URL('/farmer', request.url));
+        if (role === 'DEPOT_MANAGER') return NextResponse.redirect(new URL('/dashboard', request.url));
         
-        if (role === 'driver') return NextResponse.redirect(new URL('/driver', request.url));
-        if (role === 'farmer') return NextResponse.redirect(new URL('/farmer', request.url));
-        return NextResponse.redirect(new URL('/dashboard', request.url));
       } catch (e) {
-        // Invalid token, allow access to login
+        // Token is garbage? Let them login.
         return NextResponse.next();
       }
     }
     return NextResponse.next();
   }
 
-  // Protected paths
+  // 2. Protect Private Routes (No Token = Kick out)
   if (!token) {
-    return NextResponse.redirect(new URL('/', request.url));
+    // If trying to access protected route, kick to login
+    if (pathname.startsWith('/driver') || pathname.startsWith('/farmer') || pathname.startsWith('/dashboard')) {
+        return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
   }
 
-  // Role-based access control
+  // 3. Role-Based Security (Stop Drivers from seeing Farmer pages)
   try {
     const decoded: any = jwtDecode(token);
-    const role = decoded.role?.toLowerCase();
+    const role = decoded.role?.toUpperCase();
 
-    if (pathname.startsWith('/driver') && role !== 'driver') {
+    if (pathname.startsWith('/driver') && role !== 'DRIVER') {
       return NextResponse.redirect(new URL('/', request.url));
     }
-    if (pathname.startsWith('/farmer') && role !== 'farmer') {
+    if (pathname.startsWith('/farmer') && role !== 'FARMER') {
       return NextResponse.redirect(new URL('/', request.url));
     }
-    if (pathname.startsWith('/dashboard') && role !== 'depot_manager' && role !== 'admin') {
-      // Assuming depot_manager or admin can access dashboard
-      // If role is strictly depot_manager, then:
-      if (role !== 'depot_manager') return NextResponse.redirect(new URL('/', request.url));
+    if (pathname.startsWith('/dashboard') && role !== 'DEPOT_MANAGER') {
+      return NextResponse.redirect(new URL('/', request.url));
     }
   } catch (e) {
     return NextResponse.redirect(new URL('/', request.url));
@@ -53,15 +55,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// CRITICAL: This prevents the middleware from running on images/css
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
-};
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+}
