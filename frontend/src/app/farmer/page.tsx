@@ -6,6 +6,7 @@ import { fetchClient } from '@/lib/fetchClient';
 import toast from 'react-hot-toast';
 import ShimmerButton from '@/components/ui/ShimmerButton';
 import SignOutButton from '@/components/SignOutButton';
+import { createShipmentAction } from '@/actions/logistics';
 
 const Container = styled.div`
   display: flex;
@@ -69,18 +70,12 @@ export default function FarmerPage() {
   const handleCreateShipment = async () => {
     setLoading(true);
     try {
-      const response = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
-        method: "POST",
-        body: JSON.stringify({
-          truck_id: "PENDING", // Will be assigned on pickup
-          origin_lat: 6.5244,
-          origin_lon: 3.3792,
-          dest_lat: 9.0765,
-          dest_lon: 7.3986
-        })
-      });
-      setPickupCode(response.pickup_code);
-      toast.success("Shipment Created!");
+      // Use the server action instead of direct fetch
+      const result = await createShipmentAction();
+      if (result.success) {
+        setPickupCode(result.pickupCode);
+        toast.success("Shipment Created!");
+      }
     } catch (error) {
       console.error("Failed to create shipment:", error);
       toast.error("Failed to create shipment");

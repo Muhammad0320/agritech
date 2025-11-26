@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import SignOutButton from './SignOutButton';
 import styled, { keyframes, css } from 'styled-components';
-import { startTripAction, reportIncidentAction, pickupShipmentAction } from '@/actions/logistics';
+import { reportIncidentAction, joinShipmentAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
 import { LoadingRow } from './Skeleton';
 import ShimmerButton from './ui/ShimmerButton';
@@ -216,7 +216,7 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
     setLoading(true);
 
     try {
-      await pickupShipmentAction(pickupCode);
+      await joinShipmentAction(pickupCode);
       toast.success("Shipment Picked Up!");
       setTripStarted(true);
       // Optional: Reload to sync server state if needed, but local state update is faster

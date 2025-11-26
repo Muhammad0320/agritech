@@ -77,7 +77,7 @@ type LoginRequest struct {
 }
 
 type ShipmentRequest struct {
-	TruckID   *string `json:"truck_id"` // Optional, can be nil
+	TruckID   *string `json:"truck_id,omitempty"` // Optional, can be nil
 	OriginLat float64 `json:"origin_lat" binding:"required,latitude"`
 	OriginLon float64 `json:"origin_lon" binding:"required,longitude"`
 	DestLat   float64 `json:"dest_lat" binding:"required,latitude"`
