@@ -34,7 +34,7 @@ export async function loginAction(formData: FormData) {
     // If backend returns role, use it. Otherwise use the one from form (less secure but works for redirect)
     const userRole = response.role || role;
     cookieStore.set("user_role", userRole, { maxAge: 60 * 60 * 24 * 30 });
-
+    
     return { success: true, role: userRole };
   } catch (error: any) {
     console.error("Login failed:", error);
