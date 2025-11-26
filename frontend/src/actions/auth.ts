@@ -68,3 +68,12 @@ export async function registerAction(formData: FormData) {
     return { success: false, error: error.message || "Registration failed" };
   }
 }
+
+export async function logoutAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete("token");
+  cookieStore.delete("is_authenticated");
+  cookieStore.delete("user_role");
+  cookieStore.delete("active_shipment"); // Clear active shipment if any
+  redirect("/");
+}

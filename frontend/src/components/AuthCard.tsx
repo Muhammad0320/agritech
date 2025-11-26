@@ -155,9 +155,22 @@ export default function AuthCard() {
         const result = await loginAction(formData);
         if (result.success) {
           toast.success('Welcome back!');
-          if (result.role === 'DRIVER') router.push('/driver');
-          else if (result.role === 'FARMER') router.push('/farmer');
-          else router.push('/dashboard');
+          toast.success('Welcome back!');
+          
+          switch (result.role) {
+            case 'DRIVER':
+              router.push('/driver');
+              break;
+            case 'FARMER':
+              router.push('/farmer');
+              break;
+            case 'DEPOT_MANAGER':
+              router.push('/dashboard');
+              break;
+            default:
+              toast.error('Unknown role: ' + result.role);
+              // Optional: router.push('/');
+          }
         } else {
           toast.error(result.error || 'Login Failed');
         }
