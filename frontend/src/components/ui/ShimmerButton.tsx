@@ -2,12 +2,12 @@
 
 import styled, { keyframes, css } from 'styled-components';
 
-const spin = keyframes`
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
+const shimmer = keyframes`
+  0% {
+    background-position: -200% 0;
   }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
+  100% {
+    background-position: 200% 0;
   }
 `;
 
@@ -18,71 +18,46 @@ interface ButtonProps {
 }
 
 const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
-  position: relative;
   width: 100%;
   padding: 16px;
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
   font-weight: 600;
-  color: white;
   cursor: pointer;
-  background: transparent;
+  transition: transform 0.2s, box-shadow 0.2s;
+  color: white;
+  position: relative;
   overflow: hidden;
-  z-index: 0;
-  transition: transform 0.2s;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 
-  /* --- THE SPINNER (::before) --- */
-  /* Only visible when loading */
+  /* Normal State Colors */
+  background: ${({ $variant }) => 
+    $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
+    $variant === 'neutral' ? '#334155' :
+    'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Primary Default
+  };
+
+  /* Loading State */
   ${({ $isLoading }) => $isLoading && css`
-    cursor: wait;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 200%;
-      height: 200%;
-      background: conic-gradient(from 0deg, transparent 0 340deg, #10b981 360deg);
-      animation: ${spin} 3s linear infinite;
-      z-index: -2;
-    }
+    cursor: not-allowed;
+    background: linear-gradient(
+      45deg,
+      #10b981 25%,
+      #34d399 50%,
+      #10b981 75%
+    );
+    background-size: 200% 100%;
+    animation: ${shimmer} 1.5s infinite linear;
+    color: #fff;
   `}
 
-  /* --- THE MASK / BACKPLATE (::after) --- */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 3px; /* Defines border thickness */
-    background: ${({ $variant, $isLoading }) => 
-      $isLoading ? '#1e293b' : /* Dark Slate when loading to show border */
-      $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
-      $variant === 'neutral' ? '#334155' :
-      'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-    };
-    border-radius: 10px; /* Matches button radius */
-    z-index: -1;
-    transition: background 0.3s;
-  }
-
-  /* --- CONTENT LAYER --- */
-  span {
-    position: relative;
-    z-index: 1;
-  }
-
   &:active {
-    transform: scale(0.98);
+    transform: ${({ $isLoading }) => $isLoading ? 'none' : 'scale(0.98)'};
   }
 
   &:disabled {
     opacity: ${({ $isLoading }) => $isLoading ? 1 : 0.7};
-    cursor: ${({ $isLoading }) => $isLoading ? 'wait' : 'not-allowed'};
+    cursor: not-allowed;
   }
 `;
 
@@ -98,7 +73,7 @@ export default function ShimmerButton({
       disabled={isLoading || props.disabled} 
       {...props}
     >
-      <span>{isLoading ? loadingText : children}</span>
+      {isLoading ? loadingText : children}
     </StyledButton>
   );
 }

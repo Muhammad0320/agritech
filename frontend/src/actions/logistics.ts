@@ -16,10 +16,10 @@ export async function startTripAction(formData: FormData) {
   try {
     // 1. Create Shipment
     // Using dummy coordinates for demo purposes (Lagos to Abuja approx)
-    const createRes = await fetchClient<{ id: string }>("/api/shipments", {
+    const createRes = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
       method: "POST",
       body: JSON.stringify({
-        truck_id: truckId,
+        truck_id: truckId, // Ensure this ID exists in DB or use "PENDING" if allowed
         origin_lat: 6.5244,
         origin_lon: 3.3792,
         dest_lat: 9.0765,
@@ -27,20 +27,24 @@ export async function startTripAction(formData: FormData) {
       })
     });
 
-    const newShipmentId = createRes.id;
+    const { id: newShipmentId, pickup_code } = createRes;
 
-    // 2. Start Shipment
+    // 2. Start Shipment - REMOVED
+    // We now return the pickup code so the driver/farmer can perform the handshake.
+    // Auto-starting invalidates the pickup code flow.
+    /*
     await fetchClient("/api/shipments/start", {
       method: "POST",
       body: JSON.stringify({ shipment_id: newShipmentId }),
     });
+    */
 
-    // Save state to cookie for persistence
-    const cookieStore = await cookies();
-    cookieStore.set("active_shipment", newShipmentId);
-    cookieStore.set("active_truck", truckId);
+    // Save state to cookie for persistence (Optional, maybe wait for pickup?)
+    // const cookieStore = await cookies();
+    // cookieStore.set("active_shipment", newShipmentId);
+    // cookieStore.set("active_truck", truckId);
 
-    return { success: true, shipmentId: newShipmentId };
+    return { success: true, shipmentId: newShipmentId, pickupCode: pickup_code };
 
   } catch (error: any) {
     console.error("Failed to start trip:", error);

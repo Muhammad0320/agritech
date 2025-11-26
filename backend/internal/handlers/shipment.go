@@ -25,10 +25,12 @@ func (h *ShipmentHandler) CreateShipment(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("Reached here? ------------------------")
+
 	id := uuid.New().String()
 	// Generate 6-digit pickup code (simple implementation)
 	pickupCode := fmt.Sprintf("AG-%03d", time.Now().Nanosecond()%1000) // Simple demo code
-
+	fmt.Println(pickupCode, "---------------------")
 	_, err := db.Pool.Exec(c.Request.Context(), `
 		INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code)
 		VALUES ($1, $2, $3, $4, $5, $6, 'CREATED', $7)
@@ -36,9 +38,10 @@ func (h *ShipmentHandler) CreateShipment(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create shipment"})
+		fmt.Println(err, "-----------------------------")
 		return
-	}
-
+	}	
+	fmt.Println("Reached here 2222? ------------------------")
 	c.JSON(http.StatusCreated, gin.H{"id": id, "status": "CREATED", "pickup_code": pickupCode})
 }
 

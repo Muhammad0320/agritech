@@ -67,6 +67,7 @@ export async function fetchClient<T>(endpoint: string, options: FetchOptions = {
     } catch (e) {
       // Ignore JSON parse error
     }
+    console.log(errorMessage, "--------------------------")
     throw new Error(errorMessage);
   }
 
