@@ -5,6 +5,7 @@ import styled, { keyframes } from 'styled-components';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { loginAction, registerAction } from '@/actions/auth';
+import { Eye, EyeOff } from 'lucide-react';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -61,9 +62,15 @@ const Label = styled.label`
   font-weight: 500;
 `;
 
+const PasswordWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
 const Input = styled.input`
   width: 100%;
   padding: 14px;
+  padding-right: ${props => props.type === 'password' || props.name?.includes('password') ? '45px' : '14px'};
   background: #0f172a;
   border: 1px solid #334155;
   border-radius: 10px;
@@ -74,6 +81,28 @@ const Input = styled.input`
 
   &:focus {
     border-color: #10b981;
+  }
+`;
+
+const ToggleButton = styled.button`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+  
+  &:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
   }
 `;
 
@@ -121,6 +150,8 @@ export default function AuthCard() {
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState('DEPOT_MANAGER');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -129,16 +160,25 @@ export default function AuthCard() {
     const formData = new FormData(e.currentTarget);
     formData.set('role', role); // Ensure role is passed
 
+    // Validate Confirm Password for Registration
+    if (!isLogin) {
+      const password = formData.get('password') as string;
+      const confirmPassword = formData.get('confirmPassword') as string;
+
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       if (isLogin) {
         const result = await loginAction(formData);
         if (result.success) {
           toast.success('Welcome back!');
-          // Redirect handled by action or we do it here?
-          // Action can't redirect easily if we want to check role here, 
-          // but action has the logic. Let's let action handle it or return url.
-          // For now, let's assume action sets cookies and we redirect based on role.
           if (result.role === 'DRIVER') router.push('/driver');
+          else if (result.role === 'FARMER') router.push('/farmer');
           else router.push('/dashboard');
         } else {
           toast.error(result.error || 'Login Failed');
@@ -181,8 +221,35 @@ export default function AuthCard() {
 
         <InputGroup>
           <Label>Password</Label>
-          <Input name="password" type="password" placeholder="••••••••" required />
+          <PasswordWrapper>
+            <Input 
+              name="password" 
+              type={showPassword ? "text" : "password"} 
+              placeholder="••••••••" 
+              required 
+            />
+            <ToggleButton type="button" onClick={() => setShowPassword(!showPassword)}>
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </ToggleButton>
+          </PasswordWrapper>
         </InputGroup>
+
+        {!isLogin && (
+          <InputGroup>
+            <Label>Confirm Password</Label>
+            <PasswordWrapper>
+              <Input 
+                name="confirmPassword" 
+                type={showConfirmPassword ? "text" : "password"} 
+                placeholder="••••••••" 
+                required 
+              />
+              <ToggleButton type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </ToggleButton>
+            </PasswordWrapper>
+          </InputGroup>
+        )}
 
         <InputGroup>
           <Label>I am a...</Label>
