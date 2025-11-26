@@ -73,6 +73,7 @@ func main() {
 		api.POST("/handshake", shipmentHandler.Handshake)
 		api.POST("/telemetry", telemetryHandler.ReceiveTelemetry)
 		api.POST("/telemetry/incident", telemetryHandler.ReportIncident)
+		api.GET("/shipments/active", shipmentHandler.GetActiveShipments)
 	}
 
 	// Start Simulation (in a separate goroutine)

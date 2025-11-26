@@ -42,7 +42,7 @@ export async function joinShipmentAction(pickupCode: string) {
   // truck_id is now handled by the backend via the auth token
   
   try {
-    const response = await fetchClient<{ success: boolean, shipment_id: string }>("/api/shipments/pickup", {
+    const response = await fetchClient<{ success: boolean, shipment_id: string, origin_lat: number, origin_lon: number }>("/api/shipments/pickup", {
       method: "POST",
       body: JSON.stringify({ 
         pickup_code: pickupCode
@@ -51,9 +51,9 @@ export async function joinShipmentAction(pickupCode: string) {
 
     if (response.success) {
         cookieStore.set("active_shipment", response.shipment_id);
-        // We assume the backend used the authenticated user's ID as the truck ID
-        // We can't easily get it back here without another call, but for the UI state:
         cookieStore.set("active_truck", "ME"); 
+        
+        // We could store the starting coordinates if needed, but for now just success
         
         revalidatePath("/driver");
         return { success: true };
@@ -103,6 +103,35 @@ export async function getLivePositionsAction() {
     return data;
   } catch (error) {
     console.error("Failed to get live positions:", error);
+    return [];
+  }
+}
+
+export async function getLiveTrucksAction() {
+  try {
+    // User requested: SELECT * FROM shipments WHERE status = 'IN_TRANSIT'
+    // We will use the existing /status endpoint if it fits, OR create a new one?
+    // The user said "Query the DB...". Since we are in a Server Action, we can't query DB directly (unless we use the DB pool directly, but we are in frontend).
+    // We must call the backend.
+    // The backend doesn't have an endpoint for "active shipments" specifically, but /status returns truck status.
+    // BUT the user asked for "SELECT * FROM shipments".
+    // I should probably add a backend endpoint for this or use /status if it's close enough.
+    // However, the user's prompt "Query the DB: SELECT * FROM shipments..." suggests I should modify the backend or use a raw query if I was in backend.
+    // Since I am in frontend, I need an endpoint.
+    // I will assume I should add a new endpoint `GET /shipments?status=IN_TRANSIT` or similar.
+    // OR, I can use the existing `getLivePositionsAction` which calls `/status`.
+    // Let's look at the user request again: "Create a getLiveTrucks Server Action. Query the DB... Pass this data to the LiveMap".
+    // This implies the Server Action *is* the place where the query happens? No, Server Actions in Next.js run on server, but my DB is accessed via Go Backend.
+    // So I need a Go Backend endpoint.
+    // I will add `GET /shipments/active` to Go Backend.
+    
+    const data = await fetchClient<any[]>("/api/shipments/active", {
+      method: "GET",
+      cache: "no-store"
+    });
+    return data;
+  } catch (error) {
+    console.error("Failed to get live trucks:", error);
     return [];
   }
 }

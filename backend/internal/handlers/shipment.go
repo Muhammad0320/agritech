@@ -115,12 +115,13 @@ func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 	}
 
 	var shipmentID string
+	var originLat, originLon float64
 	err = db.Pool.QueryRow(c.Request.Context(), `
 		UPDATE shipments 
 		SET status='IN_TRANSIT', truck_id=$1, started_at=NOW()
 		WHERE pickup_code=$2 AND status='CREATED'
-		RETURNING id
-	`, truckID, req.PickupCode).Scan(&shipmentID)
+		RETURNING id, origin_lat, origin_lon
+	`, truckID, req.PickupCode).Scan(&shipmentID, &originLat, &originLon)
 
 	if err != nil {
 		// Check if it was a "not found" or "conflict" (already taken)
@@ -138,5 +139,36 @@ func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "shipment_id": shipmentID})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true, 
+		"shipment_id": shipmentID,
+		"origin_lat": originLat,
+		"origin_lon": originLon,
+	})
+}
+
+func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
+	rows, err := db.Pool.Query(c.Request.Context(), `
+		SELECT id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code 
+		FROM shipments 
+		WHERE status = 'IN_TRANSIT'
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch active shipments"})
+		return
+	}
+	defer rows.Close()
+
+	var shipments []models.Shipment
+	for rows.Next() {
+		var s models.Shipment
+		// We need to handle nullable truck_id
+		err := rows.Scan(&s.ID, &s.TruckID, &s.OriginLat, &s.OriginLon, &s.DestLat, &s.DestLon, &s.Status, &s.PickupCode)
+		if err != nil {
+			continue
+		}
+		shipments = append(shipments, s)
+	}
+
+	c.JSON(http.StatusOK, shipments)
 }

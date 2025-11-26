@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { getLivePositionsAction } from '@/actions/logistics';
+import { getLiveTrucksAction } from '@/actions/logistics';
 import styled from 'styled-components';
 
 // Fix Leaflet icon issue in Next.js
@@ -27,29 +27,31 @@ const MapWrapper = styled.div`
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
-type TruckPosition = {
-  truck_id: string;
-  latitude: number;
-  longitude: number;
-  speed: number;
-  event_type: string;
-  last_seen: string;
+type ActiveShipment = {
+  id: string;
+  truck_id: string | null;
+  origin_lat: number;
+  origin_lon: number;
+  dest_lat: number;
+  dest_lon: number;
+  status: string;
+  pickup_code: string;
 };
 
 export default function LiveMap() {
-  const [positions, setPositions] = useState<TruckPosition[]>([]);
+  const [shipments, setShipments] = useState<ActiveShipment[]>([]);
 
   useEffect(() => {
-    const fetchPositions = async () => {
-      const data = await getLivePositionsAction();
-      setPositions(data);
+    const fetchShipments = async () => {
+      const data = await getLiveTrucksAction();
+      setShipments(data);
     };
 
     // Initial fetch
-    fetchPositions();
+    fetchShipments();
 
-    // Poll every 5 seconds as requested
-    const interval = setInterval(fetchPositions, 5000);
+    // Poll every 5 seconds
+    const interval = setInterval(fetchShipments, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -57,7 +59,7 @@ export default function LiveMap() {
   return (
     <MapWrapper>
       <MapContainer 
-        center={[10.0, 10.0]} 
+        center={[9.0820, 8.6753]} // Nigeria Center
         zoom={6} 
         style={{ height: '100%', width: '100%' }}
       >
@@ -65,16 +67,16 @@ export default function LiveMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {positions.map((pos) => (
+        {shipments.map((shipment) => (
           <Marker 
-            key={pos.truck_id} 
-            position={[pos.latitude, pos.longitude]} 
+            key={shipment.id} 
+            position={[shipment.origin_lat, shipment.origin_lon]} 
             icon={icon}
           >
             <Popup>
-              <strong>Truck: {pos.truck_id}</strong><br />
-              Speed: {pos.speed.toFixed(1)} km/h<br />
-              Status: {pos.event_type}
+              <strong>Truck: {shipment.truck_id || 'Unassigned'}</strong><br />
+              Status: {shipment.status}<br />
+              Code: {shipment.pickup_code}
             </Popup>
           </Marker>
         ))}
