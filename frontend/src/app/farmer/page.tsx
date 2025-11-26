@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { fetchClient } from '@/lib/fetchClient';
 import toast from 'react-hot-toast';
 import ShimmerButton from '@/components/ui/ShimmerButton';
+import SignOutButton from '@/components/SignOutButton';
 
 const Container = styled.div`
   display: flex;
@@ -15,6 +16,13 @@ const Container = styled.div`
   background-color: #0f172a;
   color: white;
   padding: 20px;
+  position: relative;
+`;
+
+const Header = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
 `;
 
 const Title = styled.h1`
@@ -23,8 +31,6 @@ const Title = styled.h1`
   margin-bottom: 40px;
   color: #10b981;
 `;
-
-// CreateButton removed in favor of ShimmerButton
 
 const CodeDisplay = styled.div`
   margin-top: 40px;
@@ -63,7 +69,6 @@ export default function FarmerPage() {
   const handleCreateShipment = async () => {
     setLoading(true);
     try {
-      // Using dummy coordinates for now as per previous implementation logic
       const response = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
         method: "POST",
         body: JSON.stringify({
@@ -86,6 +91,9 @@ export default function FarmerPage() {
 
   return (
     <Container>
+      <Header>
+        <SignOutButton />
+      </Header>
       <Title>Farmer Dashboard</Title>
       
       {!pickupCode ? (

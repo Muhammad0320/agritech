@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import SignOutButton from './SignOutButton';
 import styled, { keyframes, css } from 'styled-components';
 import { startTripAction, reportIncidentAction, pickupShipmentAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
@@ -295,6 +296,9 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
 
   return (
     <Container>
+      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 50 }}>
+        <SignOutButton />
+      </div>
       <ScreenFrame />
       
       {/* Header / Status */}
