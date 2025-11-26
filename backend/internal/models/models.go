@@ -59,7 +59,7 @@ type User struct {
 
 type Shipment struct {
 	ID          string     `json:"id"`
-	TruckID     string     `json:"truck_id"`
+	TruckID     *string    `json:"truck_id"`
 	OriginLat   float64    `json:"origin_lat"`
 	OriginLon   float64    `json:"origin_lon"`
 	DestLat     float64    `json:"dest_lat"`

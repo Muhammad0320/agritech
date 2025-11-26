@@ -120,6 +120,12 @@ func InitDB(pool *pgxpool.Pool) error {
 		return fmt.Errorf("failed to add pickup_code column: %v", err)
 	}
 
+	// Ensure truck_id is nullable (migration for existing tables)
+	_, err = pool.Exec(ctx, "ALTER TABLE shipments ALTER COLUMN truck_id DROP NOT NULL;")
+	if err != nil {
+		return fmt.Errorf("failed to make truck_id nullable: %v", err)
+	}
+
 	// 3. Convert to Hypertable (Conditional)
 	// Check if hypertable exists to avoid error
 	var exists bool

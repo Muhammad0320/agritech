@@ -155,7 +155,6 @@ export default function AuthCard() {
         const result = await loginAction(formData);
         if (result.success) {
           toast.success('Welcome back!');
-          toast.success('Welcome back!');
           
           switch (result.role) {
             case 'DRIVER':
