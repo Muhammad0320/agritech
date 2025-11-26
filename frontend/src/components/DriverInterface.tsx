@@ -6,6 +6,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { startTripAction, reportIncidentAction, pickupShipmentAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
 import { LoadingRow } from './Skeleton';
+import ShimmerButton from './ui/ShimmerButton';
 
 // --- Keyframes ---
 
@@ -332,22 +333,24 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
 
       <div style={{ width: '100%', maxWidth: '400px', zIndex: 10, marginTop: '80px' }}>
         {!tripStarted ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%' }}>
              <h2 style={{ color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '2px', fontSize: '1.2rem' }}>
                Awaiting Assignment
              </h2>
              
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%' }}>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
                 <input 
                     type="text" 
                     placeholder="ENTER PICKUP CODE"
                     value={pickupCode}
                     onChange={(e) => setPickupCode(e.target.value.toUpperCase())}
                     style={{
-                        padding: '20px',
+                        width: '100%',
+                        height: '56px',
+                        padding: '0 20px',
                         background: 'rgba(30, 41, 59, 0.8)',
                         border: '2px solid #334155',
-                        borderRadius: '16px',
+                        borderRadius: '12px',
                         color: 'white',
                         fontSize: '1.5rem',
                         textAlign: 'center',
@@ -357,9 +360,14 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
                         textTransform: 'uppercase'
                     }}
                 />
-                <RadarButton onClick={handlePickup} disabled={loading || pickupCode.length < 6}>
-                    {loading ? 'VERIFYING...' : 'CONFIRM'}
-                </RadarButton>
+                <ShimmerButton 
+                  onClick={handlePickup} 
+                  isLoading={loading} 
+                  loadingText="VERIFYING..."
+                  disabled={pickupCode.length < 6}
+                >
+                  CONFIRM
+                </ShimmerButton>
              </div>
           </div>
         ) : (

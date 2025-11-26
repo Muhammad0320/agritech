@@ -2,69 +2,103 @@
 
 import styled, { keyframes, css } from 'styled-components';
 
-const shimmer = keyframes`
-  0% {
-    background-position: -200% 0;
+const spin = keyframes`
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-  100% {
-    background-position: 200% 0;
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 `;
 
 interface ButtonProps {
-  isLoading?: boolean; // External prop (React warning fix is below)
+  isLoading?: boolean;
   loadingText?: string;
   $variant?: 'primary' | 'danger' | 'neutral';
 }
 
-// Note: We use $isLoading here (Transient Prop) so it doesn't pass to DOM
 const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
+  position: relative;
   width: 100%;
   padding: 16px;
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
   color: white;
-  position: relative;
+  cursor: pointer;
+  background: transparent; /* We use ::after for the background */
   overflow: hidden;
+  z-index: 0;
+  transition: transform 0.2s;
+  height: 56px; /* Fixed height to match inputs */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  /* --- NORMAL STATE COLORS --- */
-  background: ${({ $variant }) => 
-    $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
-    $variant === 'neutral' ? '#334155' :
-    'linear-gradient(135deg, #10b981 0%, #059669 100%)' // Green Default
-  };
-
-  /* --- LOADING STATE (The NotebookLM Effect) --- */
+  /* --- THE TRAVELING BORDER (Loading State) --- */
   ${({ $isLoading }) => $isLoading && css`
-    cursor: wait; /* distinct from not-allowed */
+    cursor: not-allowed;
     
-    /* THE FIX: Green Shimmer, not Grey */
-    background: linear-gradient(
-      45deg,
-      #059669 25%,   /* Darker Green */
-      #34d399 50%,   /* Bright Emerald Light */
-      #059669 75%    /* Darker Green */
-    );
-    
-    background-size: 200% 100%;
-    animation: ${shimmer} 1.5s infinite linear;
-    
-    /* Ensure text stays bright white */
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    /* The Spinning Light */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400%; /* Large enough to cover corners */
+      height: 400%;
+      background: conic-gradient(
+        from 0deg, 
+        transparent 0%, 
+        transparent 20%, 
+        #10b981 50%, 
+        transparent 80%
+      );
+      animation: ${spin} 2s linear infinite;
+      z-index: -2;
+    }
   `}
 
+  /* --- THE INNER BACKGROUND (Solid Slate) --- */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 2px; /* Creates the border width */
+    background: ${({ $variant }) => 
+      $variant === 'danger' ? '#dc2626' :
+      $variant === 'neutral' ? '#334155' :
+      '#0f172a' /* Dark Slate for Primary */
+    };
+    
+    /* If NOT loading, we might want a solid gradient or color. 
+       But the user specifically asked for this effect for ShimmerButton.
+       Let's make the non-loading state look good too. */
+    background: ${({ $isLoading, $variant }) => 
+      $isLoading ? '#0f172a' : /* Dark center when loading to show border */
+      $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
+      $variant === 'neutral' ? '#334155' :
+      'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+    };
+
+    border-radius: 10px; /* slightly less than parent */
+    z-index: -1;
+    transition: background 0.3s;
+  }
+
+  /* Text Layer */
+  span {
+    position: relative;
+    z-index: 1;
+  }
+
   &:active {
-    transform: ${({ $isLoading }) => $isLoading ? 'none' : 'scale(0.98)'};
+    transform: scale(0.98);
   }
 
   &:disabled {
-    /* Ensure opacity stays 100% when loading so it looks 'Alive' */
     opacity: ${({ $isLoading }) => $isLoading ? 1 : 0.7};
+    cursor: ${({ $isLoading }) => $isLoading ? 'not-allowed' : 'not-allowed'};
   }
 `;
 
@@ -76,11 +110,11 @@ export default function ShimmerButton({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & ButtonProps) {
   return (
     <StyledButton 
-      $isLoading={isLoading} // Pass with $ so React doesn't warn
+      $isLoading={isLoading} 
       disabled={isLoading || props.disabled} 
       {...props}
     >
-      {isLoading ? loadingText : children}
+      <span>{isLoading ? loadingText : children}</span>
     </StyledButton>
   );
 }
