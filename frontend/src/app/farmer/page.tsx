@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { fetchClient } from '@/lib/fetchClient';
 import toast from 'react-hot-toast';
+import ShimmerButton from '@/components/ui/ShimmerButton';
 
 const Container = styled.div`
   display: flex;
@@ -23,32 +24,7 @@ const Title = styled.h1`
   color: #10b981;
 `;
 
-const CreateButton = styled.button`
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  padding: 30px 60px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  border-radius: 20px;
-  cursor: pointer;
-  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.5);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-`;
+// CreateButton removed in favor of ShimmerButton
 
 const CodeDisplay = styled.div`
   margin-top: 40px;
@@ -113,9 +89,11 @@ export default function FarmerPage() {
       <Title>Farmer Dashboard</Title>
       
       {!pickupCode ? (
-        <CreateButton onClick={handleCreateShipment} disabled={loading}>
-          {loading ? 'Generating...' : 'Create New Shipment'}
-        </CreateButton>
+        <div style={{ width: '100%', maxWidth: '400px' }}>
+          <ShimmerButton onClick={handleCreateShipment} isLoading={loading} loadingText="Generating...">
+            Create New Shipment
+          </ShimmerButton>
+        </div>
       ) : (
         <CodeDisplay>
           <CodeLabel>Show this code to the Driver</CodeLabel>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { loginAction, registerAction } from '@/actions/auth';
 import { Eye, EyeOff } from 'lucide-react';
+import ShimmerButton from './ui/ShimmerButton';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -119,29 +120,6 @@ const Select = styled.select`
 
   &:focus {
     border-color: #10b981;
-  }
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 16px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s;
-  margin-top: 10px;
-
-  &:active {
-    transform: scale(0.98);
-  }
-  
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
   }
 `;
 
@@ -260,9 +238,9 @@ export default function AuthCard() {
           </Select>
         </InputGroup>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Processing...' : (isLogin ? 'Login' : 'Create Account')}
-        </Button>
+        <ShimmerButton type="submit" isLoading={loading} loadingText="Processing...">
+          {isLogin ? 'Login' : 'Create Account'}
+        </ShimmerButton>
       </form>
     </Card>
   );
