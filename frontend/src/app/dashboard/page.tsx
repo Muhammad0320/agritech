@@ -144,12 +144,13 @@ export default function DashboardPage() {
       <HeaderContainer>
         <Title>Logistics Command Center</Title>
         <ButtonGroup>
-            <div style={{ width: '200px' }}>
+            <div style={{ width: '200px', height: '48px' }}>
                 <ShimmerButton 
                     onClick={handleGenerateReport} 
                     isLoading={loadingReport}
                     loadingText="Analyzing..."
                     $variant="glass"
+                    style={{ height: '100%' }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                         <Sparkles size={18} />
@@ -157,7 +158,9 @@ export default function DashboardPage() {
                     </div>
                 </ShimmerButton>
             </div>
-            <SignOutButton />
+            <div style={{ height: '48px' }}>
+                <SignOutButton />
+            </div>
         </ButtonGroup>
       </HeaderContainer>
 
