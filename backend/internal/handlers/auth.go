@@ -51,7 +51,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	c.JSON(http.StatusOK, gin.H{
+		"token":   tokenString,
+		"user_id": user.ID,
+		"role":    user.Role,
+	})
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
