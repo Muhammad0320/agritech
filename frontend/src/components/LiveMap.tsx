@@ -28,7 +28,6 @@ export default function LiveMap() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Fix Leaflet Icon issue
     // @ts-ignore
     delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
