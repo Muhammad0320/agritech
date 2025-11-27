@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getLiveTrucksAction } from '@/actions/logistics';
@@ -27,13 +27,13 @@ const MapWrapper = styled.div`
 type TruckData = {
   id: string;
   truck_id: string | null;
-  origin_lat: number;
-  origin_lon: number;
+  lat: number;
+  lon: number;
   dest_lat: number;
   dest_lon: number;
   status: string;
   pickup_code: string;
-  speed?: number; // Optional if not always present
+  speed?: number;
 };
 
 export default function LiveMap() {
@@ -78,23 +78,28 @@ export default function LiveMap() {
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         {trucks.map((truck) => (
-          <Marker 
-            key={truck.id} 
-            position={[truck.origin_lat, truck.origin_lon]} 
-            icon={truckIcon}
-          >
-            <Popup>
-              <div style={{ minWidth: '150px' }}>
-                <strong style={{ display: 'block', marginBottom: '4px', color: '#0f172a' }}>
-                  Truck: {truck.truck_id || 'Unassigned'}
-                </strong>
-                <div style={{ fontSize: '0.9rem', color: '#475569' }}>
-                  <div>Status: <span style={{ fontWeight: 600, color: truck.status === 'IN_TRANSIT' ? '#059669' : '#475569' }}>{truck.status}</span></div>
-                  <div>Speed: {truck.speed ? `${truck.speed} km/h` : 'N/A'}</div>
+          <React.Fragment key={truck.id}>
+            <Polyline 
+              positions={[[truck.lat, truck.lon], [truck.dest_lat, truck.dest_lon]]}
+              pathOptions={{ color: '#3b82f6', dashArray: '5, 10', weight: 2 }}
+            />
+            <Marker 
+              position={[truck.lat, truck.lon]} 
+              icon={truckIcon}
+            >
+              <Popup>
+                <div style={{ minWidth: '150px' }}>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: '#0f172a' }}>
+                    Truck: {truck.truck_id || 'Unassigned'}
+                  </strong>
+                  <div style={{ fontSize: '0.9rem', color: '#475569' }}>
+                    <div>Status: <span style={{ fontWeight: 600, color: truck.status === 'IN_TRANSIT' ? '#059669' : '#475569' }}>{truck.status}</span></div>
+                    <div>Speed: {truck.speed ? `${truck.speed.toFixed(1)} km/h` : 'N/A'}</div>
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
+              </Popup>
+            </Marker>
+          </React.Fragment>
         ))}
       </MapContainer>
     </MapWrapper>

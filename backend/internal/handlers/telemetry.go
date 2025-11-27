@@ -284,15 +284,14 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
             log.Printf("Failed to create demo shipment for %s: %v", truckID, err)
             continue
         }
-
         // ---------------------------------------------------------
         // STEP 4: The Async Movie Script (Concurrent)
         // ---------------------------------------------------------
         go func(tID, sID string, idx int) {
             // Stagger start times
-            time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
+            time.Sleep(time.Duration(idx*5) * time.Second)
 
-            steps := 30 // Longer simulation
+            steps := 60 // Longer simulation
             for step := 0; step <= steps; step++ {
                 progress := float64(step) / float64(steps)
                 lat := startLat + (endLat-startLat)*progress
@@ -328,8 +327,7 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
                 }
 
                 // Vary sleep for speed variance
-                sleepTime := 800 + rand.Intn(400) // 800ms to 1200ms
-                time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+                time.Sleep(2 * time.Second)
             }
 
             // Completion

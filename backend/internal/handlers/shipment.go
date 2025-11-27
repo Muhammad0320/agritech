@@ -152,9 +152,20 @@ func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 
 func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 	rows, err := db.Pool.Query(c.Request.Context(), `
-		SELECT id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code 
-		FROM shipments 
-		WHERE status = 'IN_TRANSIT'
+		SELECT s.id, s.truck_id, 
+		       COALESCE(le.latitude, s.origin_lat) as lat, 
+		       COALESCE(le.longitude, s.origin_lon) as lon, 
+		       s.dest_lat, s.dest_lon, s.status, s.pickup_code,
+		       COALESCE(le.speed, 0) as speed
+		FROM shipments s
+		LEFT JOIN LATERAL (
+			SELECT latitude, longitude, speed
+			FROM logistics_events
+			WHERE shipment_id = s.id
+			ORDER BY time DESC
+			LIMIT 1
+		) le ON true
+		WHERE s.status = 'IN_TRANSIT'
 	`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch active shipments"})
@@ -162,15 +173,28 @@ func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var shipments []models.Shipment
+	var shipments []gin.H
 	for rows.Next() {
-		var s models.Shipment
-		// We need to handle nullable truck_id
-		err := rows.Scan(&s.ID, &s.TruckID, &s.OriginLat, &s.OriginLon, &s.DestLat, &s.DestLon, &s.Status, &s.PickupCode)
+		var id, status, pickupCode string
+		var truckID *string
+		var lat, lon, destLat, destLon, speed float64
+		
+		err := rows.Scan(&id, &truckID, &lat, &lon, &destLat, &destLon, &status, &pickupCode, &speed)
 		if err != nil {
 			continue
 		}
-		shipments = append(shipments, s)
+		
+		shipments = append(shipments, gin.H{
+			"id": id,
+			"truck_id": truckID,
+			"lat": lat,
+			"lon": lon,
+			"dest_lat": destLat,
+			"dest_lon": destLon,
+			"status": status,
+			"pickup_code": pickupCode,
+			"speed": speed,
+		})
 	}
 
 	c.JSON(http.StatusOK, shipments)

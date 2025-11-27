@@ -67,6 +67,7 @@ interface SummaryData {
   total_active_trucks: number;
   total_completed_today: number;
   alerts_count: number;
+  avg_speed: number;
 }
 
 export default function LiveStats() {
@@ -74,6 +75,7 @@ export default function LiveStats() {
     total_active_trucks: 0,
     total_completed_today: 0,
     alerts_count: 0,
+    avg_speed: 0,
   });
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export default function LiveStats() {
       />
       <StatCard 
         title="Avg Speed" 
-        value="65 km/h" 
+        value={`${summary.avg_speed} km/h`} 
         icon="⚡" 
         color="amber"
       />
