@@ -1,82 +1,96 @@
 'use server';
 
 import { fetchClient } from "@/lib/fetchClient";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { CreateShipmentSchema, JoinShipmentSchema, IncidentSchema } from "@/lib/schemas";
 
-export async function createShipmentAction() {
+// Mock Destination Mapping (Hackathon Trick)
+const DESTINATIONS: Record<string, { lat: number, lon: number }> = {
+  'Ilorin Market': { lat: 8.4799, lon: 4.5418 },
+  'Lagos Port': { lat: 6.4541, lon: 3.3947 },
+  'Abuja Depot': { lat: 9.0765, lon: 7.3986 },
+  'Kano Distribution': { lat: 12.0022, lon: 8.5920 },
+};
+
+export async function createShipmentAction(produceType: string, destination: string, originLat: number, originLon: number) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
 
+  // 1. Validation
+  const validation = CreateShipmentSchema.safeParse({ produceType, destination, originLat, originLon });
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
+
+  // 2. Map Destination to Coords
+  const destCoords = DESTINATIONS[destination] || DESTINATIONS['Lagos Port']; // Default to Lagos
+
   try {
-    // 1. Create Shipment
-    const createRes = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
+    const response = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
       method: "POST",
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: JSON.stringify({
-        // truck_id is now optional/omitted
-        origin_lat: 6.5244,
-        origin_lon: 3.3792,
-        dest_lat: 9.0765,
-        dest_lon: 7.3986
-      })
+        origin_lat: originLat,
+        origin_lon: originLon,
+        dest_lat: destCoords.lat,
+        dest_lon: destCoords.lon,
+        // Backend doesn't store produceType yet, but we validate it. 
+      }),
     });
 
-    const { id: newShipmentId, pickup_code } = createRes;
-
-    cookieStore.set("active_shipment", newShipmentId);
-
-    return { success: true, shipmentId: newShipmentId, pickupCode: pickup_code };
-
+    return { success: true, pickup_code: response.pickup_code };
   } catch (error: any) {
-    console.error("Failed to create shipment:", error);
-    if (error.message) {
-        console.error("Error Message:", error.message);
-    }
-    throw new Error(`Failed to create shipment: ${error.message || "Unknown error"}`);
+    console.error("Create shipment failed:", error);
+    return { success: false, error: "Failed to create shipment" };
   }
 }
 
 export async function joinShipmentAction(pickupCode: string) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  console.log("joinShipmentAction - Token from cookie:", token ? "FOUND" : "MISSING");
-  if (token) console.log("Token sample:", token.substring(0, 10) + "...");
 
-  
+  // 1. Validation
+  const validation = JoinShipmentSchema.safeParse({ pickupCode });
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
+
   try {
-    const response = await fetchClient<{ success: boolean, shipment_id: string, origin_lat: number, origin_lon: number }>("/api/shipments/pickup", {
+    const result = await fetchClient<{ success: boolean, shipment_id: string, truck_id: string, origin_lat: number, origin_lon: number }>("/api/shipments/pickup", {
       method: "POST",
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: JSON.stringify({ 
-        pickup_code: pickupCode
-      }),
+      body: JSON.stringify({ pickup_code: pickupCode }),
     });
 
-    if (response.success) {
-        cookieStore.set("active_shipment", response.shipment_id);
-        cookieStore.set("active_truck", "ME"); 
-        
-        revalidatePath("/driver");
-        return { success: true };
+    if (result.success) {
+      // Save Truck ID and Shipment ID from Backend Response
+      cookieStore.set("active_shipment", result.shipment_id);
+      cookieStore.set("active_truck", result.truck_id); // No longer "ME"
+      
+      return { success: true };
     }
-    return { success: false, error: "Failed to join" };
-
+    return { success: false, error: "Invalid pickup code" };
   } catch (error: any) {
-    console.error("Failed to join shipment:", error);
-    return { success: false, error: error.message || "Failed to join shipment" };
+    console.error("Pickup failed:", error);
+    return { success: false, error: error.message || "Failed to pickup shipment" };
   }
 }
 
 export async function reportIncidentAction(lat: number, lng: number, type: string, description: string) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const truckId = cookieStore.get("active_truck")?.value || "unknown_truck";
-  const shipmentId = cookieStore.get("active_shipment")?.value || "unknown_shipment";
+  const truckId = cookieStore.get("active_truck")?.value;
+  const shipmentId = cookieStore.get("active_shipment")?.value;
 
-  console.log("reportIncidentAction - Truck ID ------------:", truckId);
-  console.log("reportIncidentAction - Shipment ID -------------- :", shipmentId);
+  if (!truckId || !shipmentId) {
+    return { success: false, error: "No active trip found" };
+  }
+
+  // 1. Validation
+  const validation = IncidentSchema.safeParse({ latitude: lat, longitude: lng, incidentType: type, description });
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
 
   try {
     await fetchClient("/api/telemetry/incident", {
@@ -89,33 +103,14 @@ export async function reportIncidentAction(lat: number, lng: number, type: strin
         longitude: lng,
         incident_type: type,
         description: description,
-        severity: 3 // Default severity
+        severity: type === 'ACCIDENT' ? 3 : 1
       }),
     });
 
-    revalidatePath("/dashboard");
     return { success: true };
-  } catch (error) {
-    console.error("Failed to report incident:", error);
+  } catch (error: any) {
+    console.error("Report incident failed:", error);
     return { success: false, error: "Failed to report incident" };
-  }
-}
-
-export async function getLivePositionsAction() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
-
-  try {
-    // Fetch latest truck status
-    const data = await fetchClient<any[]>("/status", {
-      method: "GET",
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      cache: "no-store" // Ensure fresh data
-    });
-    return data;
-  } catch (error) {
-    console.error("Failed to get live positions:", error);
-    return [];
   }
 }
 
@@ -124,14 +119,14 @@ export async function getLiveTrucksAction() {
   const token = cookieStore.get("token")?.value;
 
   try {
-    const data = await fetchClient<any[]>("/api/shipments/active", {
+    const trucks = await fetchClient<any[]>("/api/shipments/active", {
       method: "GET",
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      cache: "no-store"
+      cache: "no-store" 
     });
-    return data;
+    return trucks;
   } catch (error) {
-    console.error("Failed to get live trucks:", error);
+    console.error("Failed to fetch live trucks:", error);
     return [];
   }
 }
@@ -141,18 +136,14 @@ export async function getDashboardSummaryAction() {
   const token = cookieStore.get("token")?.value;
 
   try {
-    const data = await fetchClient<any>("/dashboard/summary?range=24h", {
+    const summary = await fetchClient<any>("/api/dashboard/summary", {
       method: "GET",
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       cache: "no-store"
     });
-    return data;
+    return summary;
   } catch (error) {
-    console.error("Failed to get dashboard summary:", error);
-    return {
-      total_active_trucks: 0,
-      total_completed_today: 0,
-      alerts_count: 0
-    };
+    console.error("Failed to fetch dashboard summary:", error);
+    return null;
   }
 }
