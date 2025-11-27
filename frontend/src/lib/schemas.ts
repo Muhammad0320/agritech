@@ -5,6 +5,8 @@ export const CreateShipmentSchema = z.object({
   destination: z.string().min(2, "Destination is required"),
   originLat: z.number().min(-90).max(90),
   originLon: z.number().min(-180).max(180),
+  destLat: z.number().min(-90).max(90),
+  destLon: z.number().min(-180).max(180),
 });
 
 export const JoinShipmentSchema = z.object({

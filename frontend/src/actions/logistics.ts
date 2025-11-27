@@ -4,26 +4,16 @@ import { fetchClient } from "@/lib/fetchClient";
 import { cookies } from "next/headers";
 import { CreateShipmentSchema, JoinShipmentSchema, IncidentSchema } from "@/lib/schemas";
 
-// Mock Destination Mapping (Hackathon Trick)
-const DESTINATIONS: Record<string, { lat: number, lon: number }> = {
-  'Ilorin Market': { lat: 8.4799, lon: 4.5418 },
-  'Lagos Port': { lat: 6.4541, lon: 3.3947 },
-  'Abuja Depot': { lat: 9.0765, lon: 7.3986 },
-  'Kano Distribution': { lat: 12.0022, lon: 8.5920 },
-};
 
-export async function createShipmentAction(produceType: string, destination: string, originLat: number, originLon: number) {
+export async function createShipmentAction(produceType: string, destination: string, originLat: number, originLon: number, destLat: number, destLon: number) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
 
   // 1. Validation
-  const validation = CreateShipmentSchema.safeParse({ produceType, destination, originLat, originLon });
+  const validation = CreateShipmentSchema.safeParse({ produceType, destination, originLat, originLon, destLat, destLon });
   if (!validation.success) {
     return { success: false, error: validation.error.issues[0].message };
   }
-
-  // 2. Map Destination to Coords
-  const destCoords = DESTINATIONS[destination] || DESTINATIONS['Lagos Port']; // Default to Lagos
 
   try {
     const response = await fetchClient<{ id: string, pickup_code: string }>("/api/shipments", {
@@ -32,8 +22,8 @@ export async function createShipmentAction(produceType: string, destination: str
       body: JSON.stringify({
         origin_lat: originLat,
         origin_lon: originLon,
-        dest_lat: destCoords.lat,
-        dest_lon: destCoords.lon,
+        dest_lat: destLat,
+        dest_lon: destLon,
         // Backend doesn't store produceType yet, but we validate it. 
       }),
     });
