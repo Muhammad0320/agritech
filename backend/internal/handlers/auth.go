@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type AuthHandler struct{}
@@ -78,8 +79,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 	// Basic validation could be added here
 	
-	var id int
-	err = db.Pool.QueryRow(c.Request.Context(), "INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id", req.Email, hashedPassword, role).Scan(&id)
+	// Generate UUID
+	id := uuid.New().String()
+	
+	_, err = db.Pool.Exec(c.Request.Context(), "INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)", id, req.Email, hashedPassword, role)
 
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists or database error"})
