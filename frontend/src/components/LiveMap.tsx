@@ -68,7 +68,7 @@ export default function LiveMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {shipments.map((shipment) => (
+        {(shipments || []).map((shipment) => (
           <Marker 
             key={shipment.id} 
             position={[shipment.origin_lat, shipment.origin_lon]} 
