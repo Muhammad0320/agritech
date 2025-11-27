@@ -209,18 +209,36 @@ func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
 		return
 	}
 
-	result, err := db.Pool.Exec(c.Request.Context(), `
+	var currentStatus string
+	err := db.Pool.QueryRow(c.Request.Context(), "SELECT status FROM shipments WHERE id=$1", req.ShipmentID).Scan(&currentStatus)
+	
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Shipment not found"})
+		return
+	}
+
+	if currentStatus == "DELIVERED" {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Shipment already verified"})
+		return
+	}
+
+	if currentStatus == "CREATED" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Shipment has not started yet"})
+		return
+	}
+
+	if currentStatus != "IN_TRANSIT" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid shipment status"})
+		return
+	}
+
+	_, err = db.Pool.Exec(c.Request.Context(), `
 		UPDATE shipments SET status='DELIVERED', completed_at=$1 
-		WHERE id=$2 AND status='IN_TRANSIT'
+		WHERE id=$2
 	`, time.Now(), req.ShipmentID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete shipment"})
-		return
-	}
-
-	if result.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Shipment not found or not in transit"})
 		return
 	}
 
