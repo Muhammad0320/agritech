@@ -65,10 +65,16 @@ func (h *DashboardHandler) GetSummary(c *gin.Context) {
 
 	// 3. Average Speed (Last 24h)
 	var avgSpeed float64
-	err = db.Pool.QueryRow(c.Request.Context(), "SELECT COALESCE(AVG(speed), 0) FROM logistics_events WHERE time > NOW() - INTERVAL '24 hours'").Scan(&avgSpeed)
+	// 4. Avg Speed (Real-time: Last 5 minutes only)
+	// COALESCE(..., 0) ensures we get 0 instead of NULL if no data exists
+	err = db.Pool.QueryRow(c.Request.Context(), `
+		SELECT COALESCE(AVG(speed), 0) 
+		FROM logistics_events 
+		WHERE time > NOW() - INTERVAL '5 minutes'
+	`).Scan(&avgSpeed)
+
 	if err != nil {
 		avgSpeed = 0
-		fmt.Printf("Error calculating avg speed: %v\n", err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{

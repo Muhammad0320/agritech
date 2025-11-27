@@ -230,112 +230,97 @@ func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
+
+
+
+
+// Define Routes
+type Route struct {
+	Name     string
+	DestLat  float64
+	DestLon  float64
+}
+
+var routes = []Route{
+	{"Lagos Port", 6.4433, 3.3660},      // South West
+	{"Abuja Depot", 9.0579, 7.4951},     // Center
+	{"Jebba Mill", 9.1287, 4.8340},      // North
+	{"Offa Market", 8.1393, 4.7173},     // South
+	{"Kano Hub", 12.0022, 8.5920},       // Far North
+}
+
 func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
-    // 1. Define Simulation Parameters
-    numTrucks := 5
-    // Ilorin
-    startLat, startLon := 8.5000, 4.5500
-    // Jebba
-    endLat, endLon := 9.1333, 4.8333
+	// Start 5 Trucks
+	for i := 0; i < 5; i++ {
+		go func(index int) {
+			// 1. Stagger Start (Don't launch all at once)
+			time.Sleep(time.Duration(index*3) * time.Second)
 
-    ctx := c.Request.Context()
+			// 2. Select Random Route
+			route := routes[rand.Intn(len(routes))]
+			
+			truckID := fmt.Sprintf("DEMO-TRUCK-%02d", index+1)
+			shipmentID := uuid.New().String()
 
-    // 2. Loop to spawn trucks
-    for i := 1; i <= numTrucks; i++ {
-        truckID := fmt.Sprintf("DEMO-TRUCK-%02d", i)
-        shipmentID := uuid.New().String()
+			// Create User & Truck (Ensure they exist)
+			db.Pool.Exec(context.Background(), `
+				INSERT INTO users (id, email, password, role) 
+				VALUES ($1, $2, 'demo', 'DRIVER') ON CONFLICT (id) DO NOTHING`, truckID, fmt.Sprintf("demo%d@test.com", index))
+			
+			db.Pool.Exec(context.Background(), `
+				INSERT INTO trucks (id, driver_name, plate_number) 
+				VALUES ($1, 'AI Driver', $2) ON CONFLICT (id) DO NOTHING`, truckID, fmt.Sprintf("KW-%03d", index))
 
-        // ---------------------------------------------------------
-        // STEP 1: Create the User (So it exists for Auth logic)
-        // ---------------------------------------------------------
-        _, err := db.Pool.Exec(ctx, `
-            INSERT INTO users (id, email, password, role, name)
-            VALUES ($1, $2, 'demo123', 'DRIVER', $3)
-            ON CONFLICT (id) DO NOTHING
-        `, truckID, fmt.Sprintf("demo%d@agritrack.com", i), fmt.Sprintf("AI Bot %d", i))
+			// Ilorin (Origin)
+			startLat, startLon := 8.5000, 4.5500
 
-        if err != nil {
-            log.Printf("Warning: Failed to create demo user %s: %v", truckID, err)
-        }
+			// Create Shipment
+			_, err := db.Pool.Exec(context.Background(), `
+				INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO', NOW())
+			`, shipmentID, truckID, startLat, startLon, route.DestLat, route.DestLon)
 
-        // ---------------------------------------------------------
-        // STEP 2: Create the Truck (CRITICAL FOR FOREIGN KEY)
-        // ---------------------------------------------------------
-        _, err = db.Pool.Exec(ctx, `
-            INSERT INTO trucks (id, driver_name, plate_number)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (id) DO NOTHING
-        `, truckID, fmt.Sprintf("AI Pilot %d", i), fmt.Sprintf("DEMO-KWARA-%02d", i))
+			if err != nil {
+				log.Printf("Sim Error: %v", err)
+				return
+			}
 
-        if err != nil {
-            log.Printf("Failed to create demo truck %s: %v", truckID, err)
-            continue // Skip this truck if creation fails
-        }
+			// 3. The Drive Loop (60 Steps = ~2 mins)
+			steps := 60
+			for step := 0; step <= steps; step++ {
+				progress := float64(step) / float64(steps)
+				lat := startLat + (route.DestLat-startLat)*progress
+				lon := startLon + (route.DestLon-startLon)*progress
 
-        // ---------------------------------------------------------
-        // STEP 3: Create Shipment
-        // ---------------------------------------------------------
-        _, err = db.Pool.Exec(ctx, `
-            INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO12', NOW())
-        `, shipmentID, truckID, startLat, startLon, endLat, endLon)
+				// Vary Speed (40-90 km/h)
+				currentSpeed := 40.0 + rand.Float64()*50.0
 
-        if err != nil {
-            log.Printf("Failed to create demo shipment for %s: %v", truckID, err)
-            continue
-        }
-        // ---------------------------------------------------------
-        // STEP 4: The Async Movie Script (Concurrent)
-        // ---------------------------------------------------------
-        go func(tID, sID string, idx int) {
-            // Stagger start times
-            time.Sleep(time.Duration(idx*5) * time.Second)
+				event := models.LogisticsEvent{
+					TruckID:    truckID,
+					ShipmentID: shipmentID,
+					Time:       time.Now(),
+					Latitude:   lat,
+					Longitude:  lon,
+					EventType:  "moving",
+					Speed:      currentSpeed,
+				}
+				h.eventChan <- event
 
-            steps := 60 // Longer simulation
-            for step := 0; step <= steps; step++ {
-                progress := float64(step) / float64(steps)
-                lat := startLat + (endLat-startLat)*progress
-                lon := startLon + (endLon-startLon)*progress
+				// Random Incidents
+				if step == 20 && index == 1 {
+					db.Pool.Exec(context.Background(), `INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time) VALUES ($1, $2, $3, $4, 'POLICE_CHECKPOINT', 'Simulated Checkpoint', 1, NOW())`, truckID, shipmentID, lat, lon)
+				}
+				if step == 40 && index == 3 {
+					db.Pool.Exec(context.Background(), `INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time) VALUES ($1, $2, $3, $4, 'BAD_ROAD', 'Potholes Detected', 2, NOW())`, truckID, shipmentID, lat, lon)
+				}
 
-                // Send Telemetry
-                event := models.LogisticsEvent{
-                    TruckID:    tID,
-                    ShipmentID: sID,
-                    Time:       time.Now(),
-                    Latitude:   lat,
-                    Longitude:  lon,
-                    EventType:  "moving",
-                    Speed:      60.0 + rand.Float64()*20.0, // Vary speed
-                }
-                h.eventChan <- event
+				time.Sleep(2 * time.Second)
+			}
 
-                // Random Incidents
-                // Truck 1 gets POLICE at step 10
-                if idx == 1 && step == 10 {
-                    db.Pool.Exec(context.Background(), `
-                        INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
-                        VALUES ($1, $2, $3, $4, 'POLICE_CHECKPOINT', 'Simulated Checkpoint', 1, NOW())
-                    `, tID, sID, lat, lon)
-                }
+			// Finish
+			db.Pool.Exec(context.Background(), `UPDATE shipments SET status='DELIVERED', completed_at=NOW() WHERE id=$1`, shipmentID)
+		}(i)
+	}
 
-                // Truck 3 gets BAD_ROAD at step 15
-                if idx == 3 && step == 15 {
-                    db.Pool.Exec(context.Background(), `
-                        INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
-                        VALUES ($1, $2, $3, $4, 'BAD_ROAD', 'Simulated Bad Road', 2, NOW())
-                    `, tID, sID, lat, lon)
-                }
-
-                // Vary sleep for speed variance
-                time.Sleep(2 * time.Second)
-            }
-
-            // Completion
-            db.Pool.Exec(context.Background(), `
-                UPDATE shipments SET status='DELIVERED', completed_at=NOW() WHERE id=$1
-            `, sID)
-        }(truckID, shipmentID, i)
-    }
-
-    c.JSON(http.StatusOK, gin.H{"success": true, "message": "Fleet simulation started (5 Trucks)"})
+	c.JSON(http.StatusOK, gin.H{"message": "Fleet Simulation Started (5 Trucks)"})
 }
