@@ -1,119 +1,144 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { getLiveTrucksAction } from '@/actions/logistics';
-import styled from 'styled-components';
+import toast from 'react-hot-toast';
+import 'leaflet/dist/leaflet.css';
 
-// Custom Truck Icon (Green Dot with Pulse)
-const truckIcon = L.divIcon({
-  className: 'custom-icon',
-  html: `<div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px #10b981; border: 2px solid white;"></div>`,
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-});
-
-const MapWrapper = styled.div`
-  height: 100%;
-  min-height: 500px;
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(59, 130, 246, 0.3); /* Blue Glow */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 0;
-`;
-
-type TruckData = {
-  id: string;
-  truck_id: string | null;
-  lat?: number;
-  lon?: number;
-  origin_lat?: number;
-  origin_lon?: number;
-  dest_lat: number;
-  dest_lon: number;
-  status: string;
-  pickup_code: string;
-  speed?: number;
-};
+// Dynamic import to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+);
 
 export default function LiveMap() {
-  const [trucks, setTrucks] = useState<TruckData[]>([]);
-  const trucksRef = useRef<TruckData[]>([]);
+  const [trucks, setTrucks] = useState<any[]>([]);
+  const [Leaflet, setLeaflet] = useState<any>(null);
+  
+  // Keep track of previous trucks to detect arrivals
+  const prevTrucksRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    import('leaflet').then((L) => {
+      setLeaflet(L);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchTrucks = async () => {
-      try {
-        const data = await getLiveTrucksAction();
-        const safeData = data || [];
+      const data = await getLiveTrucksAction();
+      
+      // 1. Detect Arrivals
+      const currentIds = new Set(data.map((t: any) => t.truck_id));
+      const prevIds = prevTrucksRef.current;
 
-        // Compare new data with old data to force re-render only if changed
-        if (JSON.stringify(safeData) !== JSON.stringify(trucksRef.current)) {
-          setTrucks(safeData);
-          trucksRef.current = safeData;
+      // If an ID was in prev but NOT in current, it arrived/finished
+      prevIds.forEach(id => {
+        if (!currentIds.has(id)) {
+          toast.success(`Truck ${id} has arrived at destination!`, {
+            icon: '🏁',
+            duration: 5000,
+            style: { background: '#10b981', color: '#fff' }
+          });
         }
-      } catch (error) {
-        console.error("Error fetching live trucks:", error);
-      }
+      });
+
+      // Update Ref
+      prevTrucksRef.current = currentIds;
+      setTrucks(data);
     };
 
-    // Initial fetch
     fetchTrucks();
-
-    // Poll every 2 seconds
     const interval = setInterval(fetchTrucks, 2000);
-
     return () => clearInterval(interval);
   }, []);
 
+  if (!Leaflet) return <div className="h-full w-full bg-slate-900 animate-pulse rounded-xl" />;
+
+  // Custom Green Pulse Icon
+  const truckIcon = Leaflet.divIcon({
+    className: 'custom-icon',
+    html: `<div style="
+      background-color: #10b981; 
+      width: 14px; 
+      height: 14px; 
+      border-radius: 50%; 
+      box-shadow: 0 0 15px #10b981; 
+      border: 2px solid white;">
+    </div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7]
+  });
+
   return (
-    <MapWrapper>
-      <MapContainer 
-        center={[9.0820, 8.6753]} // Nigeria Center
-        zoom={6} 
-        scrollWheelZoom={false}
-        style={{ height: '100%', width: '100%' }}
+    <div className="h-full w-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative">
+       <MapContainer 
+        center={[8.9, 4.6]} 
+        zoom={7} 
+        scrollWheelZoom={false} // Stops annoying zoom on scroll
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         />
-        {trucks.map((truck) => {
-          // Defensive check: Use lat/lon if available, else fallback to origin, else 0 (and skip)
-          const currentLat = truck.lat ?? truck.origin_lat;
-          const currentLon = truck.lon ?? truck.origin_lon;
 
-          if (currentLat === undefined || currentLon === undefined) {
-             return null; // Skip invalid trucks
-          }
-
-          return (
-          <React.Fragment key={truck.id}>
-            <Polyline 
-              positions={[[currentLat, currentLon], [truck.dest_lat, truck.dest_lon]]}
-              pathOptions={{ color: '#3b82f6', dashArray: '5, 10', weight: 2 }}
-            />
-            <Marker 
-              position={[currentLat, currentLon]} 
-              icon={truckIcon}
-            >
-              <Popup>
-                <div style={{ minWidth: '150px' }}>
-                  <strong style={{ display: 'block', marginBottom: '4px', color: '#0f172a' }}>
-                    Truck: {truck.truck_id || 'Unassigned'}
-                  </strong>
-                  <div style={{ fontSize: '0.9rem', color: '#475569' }}>
-                    <div>Status: <span style={{ fontWeight: 600, color: truck.status === 'IN_TRANSIT' ? '#059669' : '#475569' }}>{truck.status}</span></div>
-                    <div>Speed: {truck.speed ? `${truck.speed.toFixed(1)} km/h` : 'N/A'}</div>
-                  </div>
+        {trucks.map((truck) => (
+          <div key={truck.shipment_id}>
+            {/* The Dot */}
+            <Marker position={[truck.origin_lat, truck.origin_lon]} icon={truckIcon}>
+              <Popup className="font-sans">
+                <div className="text-slate-900">
+                  <strong>{truck.truck_id}</strong><br/>
+                  Speed: {Math.round(truck.speed || 60)} km/h<br/>
+                  Dest: {truck.dest_lat.toFixed(2)}, {truck.dest_lon.toFixed(2)}
                 </div>
               </Popup>
             </Marker>
-          </React.Fragment>
-          );
-        })}
+
+            {/* The Line to Destination */}
+            <Polyline 
+              positions={[
+                [truck.origin_lat, truck.origin_lon], 
+                [truck.dest_lat, truck.dest_lon]
+              ]}
+              pathOptions={{ 
+                color: '#3b82f6', 
+                weight: 2, 
+                dashArray: '5, 10', 
+                opacity: 0.6 
+              }} 
+            />
+          </div>
+        ))}
       </MapContainer>
-    </MapWrapper>
+      
+      {/* Overlay Legend */}
+      <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/80 backdrop-blur px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span> Active
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-0.5 border-t border-dashed border-blue-500"></span> Route
+        </div>
+      </div>
+    </div>
   );
 }
