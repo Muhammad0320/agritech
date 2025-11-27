@@ -1,54 +1,7 @@
-I've updated some bottlenecks in the @telemetry.go expecially in the receive telemetry. 
-"Act as a Senior Go Engineer. We need to refactor the Database Initialization and add a robust Testing Suite.
+Tell it to make it make the toggle way better to match out theme. And You have to add a beautifylly styled visuals make those risk heatmap abit smaller and label it because this is a hackerthon. there's no way the judges would know what what means. 
 
-1. Refactor: Code-First Schema (No .sql files)
+I really love how those cirlces are transparent. 
 
-I do not want external schema.sql or migration.sql files.
+And also add commands and task to make it even better in every aspect.
 
-Move all SQL DDL statements (CREATE TABLE, indexes, etc.) into a Go function InitDB(pool *pgxpool.Pool) inside db/db.go or main.go.
-
-
-Requirement:
-
-Use CREATE TABLE IF NOT EXISTS.
-
-For TimescaleDB hypertables, wrap the create_hypertable call in a logic check: SELECT create_hypertable(...) WHERE NOT EXISTS (SELECT * FROM timescaledb_information.hypertables ...) or use a PL/pgSQL block to ignore errors if it already exists.
-
-Call this InitDB function immediately after connecting to the pool in main().
-
-2. Testing: Endpoint Integration Tests
-
-Create a tests/ folder (or _test.go files).
-
-We need Integration Tests using net/http/httptest + gin.CreateTestContext.
-
-Do not mock the database. We are running this in a dev environment with Docker, so let the tests hit the real (or a separate test) database to ensure SQL syntax is correct.
-
-Tasks:
-
-Write a helper SetupTestRouter() that injects the DB pool and returns the Gin engine.
-
-Write a test TestTelemetryEndpoint:
-
-Login/Auth (Mock a token or creating a valid user/shipment first).
-
-Send a valid JSON payload -> Expect 200/202.
-
-Send an invalid payload (missing fields) -> Expect 400.
-
-Write a test TestDashboardEndpoint:
-
-Insert dummy data into the DB.
-
-Call GET /api/dashboard/summary.
-
-Assert that the JSON response contains the correct counts.
-
-Output:
-
-The updated InitDB function with the embedded SQL strings.
-
-The main.go snippet calling it.
-
-The full handlers_test.go file showing how to test Gin endpoints with a real DB connection."
-Bismilah! Go
+give a perfect and effective prompt
