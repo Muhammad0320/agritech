@@ -44,7 +44,6 @@ export async function joinShipmentAction(pickupCode: string) {
   console.log("joinShipmentAction - Token from cookie:", token ? "FOUND" : "MISSING");
   if (token) console.log("Token sample:", token.substring(0, 10) + "...");
 
-  console.log(token, "---------------- Token -------------------")
   
   try {
     const response = await fetchClient<{ success: boolean, shipment_id: string, origin_lat: number, origin_lon: number }>("/api/shipments/pickup", {
@@ -75,6 +74,9 @@ export async function reportIncidentAction(lat: number, lng: number, type: strin
   const token = cookieStore.get("token")?.value;
   const truckId = cookieStore.get("active_truck")?.value || "unknown_truck";
   const shipmentId = cookieStore.get("active_shipment")?.value || "unknown_shipment";
+
+  console.log("reportIncidentAction - Truck ID ------------:", truckId);
+  console.log("reportIncidentAction - Shipment ID -------------- :", shipmentId);
 
   try {
     await fetchClient("/api/telemetry/incident", {
