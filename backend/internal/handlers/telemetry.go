@@ -191,3 +191,39 @@ func (h *TelemetryHandler) flushBatch(batch []models.LogisticsEvent) {
 		log.Printf("Successfully flushed %d events", len(batch))
 	}
 }
+
+func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
+	// Fetch incidents from the last 24 hours
+	rows, err := db.Pool.Query(c.Request.Context(), `
+		SELECT truck_id, incident_type, description, severity, time 
+		FROM logistics_incidents 
+		WHERE time > NOW() - INTERVAL '24 hours'
+		ORDER BY time DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch incidents"})
+		return
+	}
+	defer rows.Close()
+
+	// Let's use a custom struct or map for response.
+	var result []gin.H
+
+	for rows.Next() {
+		var truckID, iType, desc string
+		var severity int
+		var t time.Time
+		if err := rows.Scan(&truckID, &iType, &desc, &severity, &t); err != nil {
+			continue
+		}
+		result = append(result, gin.H{
+			"truck_id":      truckID,
+			"incident_type": iType,
+			"description":   desc,
+			"severity":      severity,
+			"time":          t,
+		})
+	}
+
+	c.JSON(http.StatusOK, result)
+}

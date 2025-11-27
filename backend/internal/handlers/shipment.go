@@ -143,6 +143,7 @@ func (h *ShipmentHandler) PickupShipment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true, 
 		"shipment_id": shipmentID,
+		"truck_id": truckID,
 		"origin_lat": originLat,
 		"origin_lon": originLon,
 	})
