@@ -242,3 +242,21 @@ export async function verifyArrivalAction(shipmentId: string, lat: number, lon: 
     return { success: false, error: error.message || "You are too far from the destination." };
   }
 }
+
+export async function startDemoSimulationAction() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  try {
+    const result = await fetchClient<{ success: boolean, message: string, shipment_id: string }>("/api/simulate/demo", {
+      method: "GET",
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      cache: "no-store"
+    });
+
+    return { success: true, message: result.message, shipment_id: result.shipment_id };
+  } catch (error: any) {
+    console.error("Failed to start demo:", error);
+    return { success: false, error: "Failed to start demo simulation" };
+  }
+}
