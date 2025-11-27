@@ -274,7 +274,7 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
     endLat, endLon := 9.1333, 4.8333
 
     _, err = db.Pool.Exec(ctx, `
-        INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, start_time)
+        INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO12', NOW())
     `, shipmentID, truckID, startLat, startLon, endLat, endLon)
 
