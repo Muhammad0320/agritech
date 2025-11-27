@@ -239,21 +239,6 @@ export default function LiveMap() {
             <span>⚠️</span> Risk Zones
           </ToggleButton>
        </ToggleContainer>
-
-       {/* Legend */}
-       {viewMode === 'HEATMAP' && (
-         <LegendContainer>
-            <LegendTitle>Map Legend</LegendTitle>
-            <LegendItem>
-              <Dot $color="#10b981" />
-              <span>Active Truck Route</span>
-            </LegendItem>
-            <LegendItem>
-              <Dot $color="#ef4444" />
-              <span>Police Checkpoint</span>
-            </LegendItem>
-            <LegendItem>
-              <Dot $color="#a855f7" />
               <span>Bad Road / Pothole</span>
             </LegendItem>
             <LegendItem>
