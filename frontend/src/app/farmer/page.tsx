@@ -7,6 +7,23 @@ import toast from 'react-hot-toast';
 import SignOutButton from '@/components/SignOutButton';
 import ShimmerButton from '@/components/ui/ShimmerButton';
 
+// Task 1: The Coordinate Map
+const DESTINATIONS = {
+  'kwara': [
+    { name: 'Ilorin - Mandate Market', lat: 8.4966, lng: 4.5421 },
+    { name: 'Offa - Owode Market', lat: 8.1393, lng: 4.7173 },
+    { name: 'Jebba - Paper Mill Depot', lat: 9.1287, lng: 4.8340 },
+    { name: 'Bode Saadu - Cashew Hub', lat: 9.0167, lng: 4.7833 }
+  ],
+  'national': [
+    { name: 'Lagos - Mile 12 Market', lat: 6.6018, lng: 3.3515 },
+    { name: 'Lagos - Apapa Port (Export)', lat: 6.4433, lng: 3.3660 },
+    { name: 'Kano - Dawanau Grains Market', lat: 12.0673, lng: 8.4682 },
+    { name: 'Onitsha - Main Market', lat: 6.1519, lng: 6.7865 },
+    { name: 'Abuja - National Grains Reserve', lat: 9.0579, lng: 7.4951 }
+  ]
+};
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -95,7 +112,8 @@ export default function FarmerPage() {
   
   // Form State
   const [produceType, setProduceType] = useState("");
-  const [destination, setDestination] = useState("Lagos Port");
+  const [destinationName, setDestinationName] = useState("");
+  const [destCoords, setDestCoords] = useState<{lat: number, lng: number} | null>(null);
   const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
 
   // Get GPS on Load
@@ -119,6 +137,21 @@ export default function FarmerPage() {
     }
   }, []);
 
+  const handleDestinationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setDestinationName(selectedName);
+
+    // Find coords
+    let found = DESTINATIONS.kwara.find(d => d.name === selectedName);
+    if (!found) {
+      found = DESTINATIONS.national.find(d => d.name === selectedName);
+    }
+
+    if (found) {
+      setDestCoords({ lat: found.lat, lng: found.lng });
+    }
+  };
+
   const handleCreateShipment = async () => {
     if (!coords) {
       toast.error("Waiting for GPS...");
@@ -128,10 +161,21 @@ export default function FarmerPage() {
       toast.error("Please enter produce type");
       return;
     }
+    if (!destinationName || !destCoords) {
+      toast.error("Please select a destination");
+      return;
+    }
 
     setLoading(true);
     try {
-      const result = await createShipmentAction(produceType, destination, coords.lat, coords.lon);
+      const result = await createShipmentAction(
+        produceType, 
+        destinationName, 
+        coords.lat, 
+        coords.lon,
+        destCoords.lat,
+        destCoords.lng
+      );
       
       if (result.success && result.pickup_code) {
         setPickupCode(result.pickup_code);
@@ -168,11 +212,18 @@ export default function FarmerPage() {
 
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: '#94a3b8' }}>Destination</label>
-              <Select value={destination} onChange={(e) => setDestination(e.target.value)}>
-                <option value="Lagos Port">Lagos Port</option>
-                <option value="Ilorin Market">Ilorin Market</option>
-                <option value="Abuja Depot">Abuja Depot</option>
-                <option value="Kano Distribution">Kano Distribution</option>
+              <Select value={destinationName} onChange={handleDestinationChange}>
+                <option value="">Select Destination</option>
+                <optgroup label="Kwara State Hubs">
+                  {DESTINATIONS.kwara.map(dest => (
+                    <option key={dest.name} value={dest.name}>{dest.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="National Hubs">
+                  {DESTINATIONS.national.map(dest => (
+                    <option key={dest.name} value={dest.name}>{dest.name}</option>
+                  ))}
+                </optgroup>
               </Select>
             </div>
 
@@ -196,6 +247,8 @@ export default function FarmerPage() {
               onClick={() => {
                 setPickupCode(null);
                 setProduceType("");
+                setDestinationName("");
+                setDestCoords(null);
               }}
               style={{ 
                 marginTop: '20px', 

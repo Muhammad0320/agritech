@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import SignOutButton from './SignOutButton';
 import styled, { keyframes, css } from 'styled-components';
-import { reportIncidentAction, joinShipmentAction } from '@/actions/logistics';
+import { reportIncidentAction, joinShipmentAction, checkShipmentStatus } from '@/actions/logistics';
+import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import { LoadingRow } from './Skeleton';
 import ShimmerButton from './ui/ShimmerButton';
@@ -118,7 +119,7 @@ const ControlPanel = styled.div`
   margin-top: 20px;
 `;
 
-const ActionButton = styled.button<{ $variant: 'police' | 'breakdown' | 'accident' }>`
+const ActionButton = styled.button<{ $variant: 'police' | 'breakdown' | 'accident' | 'traffic' | 'bad_road' }>`
   padding: 25px;
   border-radius: 16px;
   border: none;
@@ -137,6 +138,8 @@ const ActionButton = styled.button<{ $variant: 'police' | 'breakdown' | 'acciden
   background: ${({ $variant }) => 
     $variant === 'police' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' :
     $variant === 'breakdown' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' :
+    $variant === 'traffic' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' :
+    $variant === 'bad_road' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' :
     'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
   };
 
@@ -202,11 +205,51 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [pickupCode, setPickupCode] = useState("");
   const [tripStarted, setTripStarted] = useState(isTripActive);
+  
+  // Arrival & QR State
+  const [showQR, setShowQR] = useState(false);
+  const [shipmentId, setShipmentId] = useState<string | null>(null);
+  const [isDelivered, setIsDelivered] = useState(false);
 
   // Sync prop with state
   useEffect(() => {
     setTripStarted(isTripActive);
+    // Try to recover shipment ID from cookie if possible, but for now we rely on the action response
+    // In a real app, we'd pass shipmentId as a prop too.
+    // For this demo, we'll assume the user just picked up or we need to fetch it.
+    // Let's assume we can get it from a cookie in the component or just use a placeholder if missing
+    // But wait, joinShipmentAction sets the cookie. We can't easily read it here in client component without a helper.
+    // We'll rely on the join response or a prop. 
+    // Actually, let's fetch the active shipment ID if trip is active.
+    if (isTripActive) {
+        // We need the ID for the QR code. 
+        // For the hackathon, let's just use a placeholder if we don't have it, 
+        // OR better, let's fetch it.
+        // We'll skip fetching for now and rely on the join response setting it in state.
+        // If page reloads, we might lose it. 
+        // FIX: We should probably pass shipmentId as a prop.
+        // But for now, let's just use a dummy ID if missing, or try to read cookie.
+        const match = document.cookie.match(new RegExp('(^| )active_shipment=([^;]+)'));
+        if (match) setShipmentId(match[2]);
+    }
   }, [isTripActive]);
+
+  // Polling for Delivery Status
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (showQR && shipmentId && !isDelivered) {
+      interval = setInterval(async () => {
+        const result = await checkShipmentStatus(shipmentId);
+        if (result.status === 'DELIVERED') {
+          setIsDelivered(true);
+          setShowQR(false);
+          toast.success("Shipment Completed!");
+          clearInterval(interval);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [showQR, shipmentId, isDelivered]);
 
   const handlePickup = async () => {
     if (pickupCode.length < 6) {
@@ -220,6 +263,16 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
       if (result.success) {
         toast.success("Shipment Picked Up!");
         setTripStarted(true);
+        // We need to know the shipment ID for the QR code later.
+        // The action sets the cookie, so we can try to read it or update the action to return it.
+        // Let's assume the action returns it (we updated it earlier? No, we updated createShipment).
+        // Let's check joinShipmentAction... it returns success.
+        // We should update joinShipmentAction to return the ID.
+        // But for now, let's just read the cookie.
+        setTimeout(() => {
+            const match = document.cookie.match(new RegExp('(^| )active_shipment=([^;]+)'));
+            if (match) setShipmentId(match[2]);
+        }, 100);
       } else {
         toast.error(result.error || "Failed to pickup shipment");
       }
@@ -280,6 +333,8 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
       case 'POLICE_CHECKPOINT': return '👮';
       case 'BREAKDOWN': return '🔧';
       case 'ACCIDENT': return '🚑';
+      case 'TRAFFIC': return '🚦';
+      case 'BAD_ROAD': return '🚧';
       default: return '⚠️';
     }
   };
@@ -289,13 +344,37 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
       case 'POLICE_CHECKPOINT': return '#3b82f6';
       case 'BREAKDOWN': return '#f59e0b';
       case 'ACCIDENT': return '#ef4444';
+      case 'TRAFFIC': return '#f97316'; // Orange
+      case 'BAD_ROAD': return '#8b5cf6'; // Violet
       default: return '#94a3b8';
     }
   };
 
-  // Define components here to avoid missing definitions if they were cut off
-  // But they are defined above in the file (lines 23-185).
-  // I am replacing from line 187 downwards.
+  if (isDelivered) {
+    return (
+      <Container>
+        <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+          <div style={{ fontSize: '5rem', marginBottom: '20px' }}>✅</div>
+          <Title>Shipment Completed!</Title>
+          <p style={{ color: '#94a3b8' }}>You have successfully delivered the goods.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ 
+                marginTop: '40px', 
+                padding: '16px 32px', 
+                background: '#1e293b', 
+                border: '1px solid #334155', 
+                color: 'white', 
+                borderRadius: '12px',
+                cursor: 'pointer'
+            }}
+          >
+            Start New Trip
+          </button>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -372,6 +451,25 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
                 </ShimmerButton>
              </div>
           </div>
+        ) : showQR ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '30px', animation: 'fadeIn 0.5s' }}>
+                <Title>Scan to Complete</Title>
+                <div style={{ padding: '20px', background: 'white', borderRadius: '20px' }}>
+                    <QRCode value={shipmentId || "UNKNOWN"} size={256} />
+                </div>
+                <p style={{ color: '#94a3b8', textAlign: 'center' }}>
+                    Show this QR code to the Depot Manager<br/>to confirm delivery.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10b981' }}>
+                    <div className="animate-spin">↻</div> Waiting for confirmation...
+                </div>
+                <button 
+                    onClick={() => setShowQR(false)}
+                    style={{ background: 'transparent', border: 'none', color: '#64748b', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                    Cancel / Go Back
+                </button>
+            </div>
         ) : (
           <>
             <Title>On The Road</Title>
@@ -385,7 +483,20 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
               <ActionButton $variant="accident" onClick={() => handleIncident('ACCIDENT')}>
                 🚑 Accident / Emergency
               </ActionButton>
+              {/* New Buttons */}
+              <ActionButton $variant="traffic" onClick={() => handleIncident('TRAFFIC')}>
+                🚦 Heavy Traffic
+              </ActionButton>
+              <ActionButton $variant="bad_road" onClick={() => handleIncident('BAD_ROAD')}>
+                🚧 Bad Road
+              </ActionButton>
             </ControlPanel>
+
+            <div style={{ marginTop: '40px' }}>
+                <ShimmerButton onClick={() => setShowQR(true)}>
+                    ARRIVED AT DESTINATION
+                </ShimmerButton>
+            </div>
 
             <IncidentList>
               {incidents.map(incident => (

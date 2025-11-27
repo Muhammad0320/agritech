@@ -102,7 +102,7 @@ func InitDB(pool *pgxpool.Pool) error {
 			shipment_id TEXT REFERENCES shipments(id),
 			latitude DOUBLE PRECISION NOT NULL,
 			longitude DOUBLE PRECISION NOT NULL,
-			incident_type TEXT NOT NULL, -- 'POLICE_CHECKPOINT', 'BREAKDOWN', 'ACCIDENT', 'TRAFFIC'
+			incident_type TEXT NOT NULL, -- 'POLICE_CHECKPOINT', 'BREAKDOWN', 'ACCIDENT', 'TRAFFIC', 'BAD_ROAD'
 			description TEXT,
 			severity INT CHECK (severity >= 1 AND severity <= 5)
 		);`,
