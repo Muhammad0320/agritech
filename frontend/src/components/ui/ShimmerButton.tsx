@@ -53,8 +53,14 @@ const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
     border: 1px solid #10b981;
   `}
 
+  &:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+  }
+
   &:active {
-    transform: scale(0.98);
+    transform: translateY(0);
   }
 
   &:disabled {

@@ -1,16 +1,21 @@
 'use client';
 
-import { getDashboardSummaryAction, verifyShipmentAction, startDemoSimulationAction } from "@/actions/logistics";
-import Dashboard from "@/components/Dashboard";
-import { useEffect, useState } from "react";
+import { verifyShipmentAction, startDemoSimulationAction } from "@/actions/logistics";
+import { useState } from "react";
 import styled from "styled-components";
 import ShimmerButton from "@/components/ui/ShimmerButton";
 import { generateReportAction } from "@/actions/ai";
 import ReportModal from "@/components/ReportModal";
 import toast from "react-hot-toast";
 import { Sparkles, CheckCircle, Play } from "lucide-react";
-import DashboardSkeleton from "@/components/DashboardSkeleton";
 import SignOutButton from "@/components/SignOutButton";
+import LiveStats from "@/components/LiveStats";
+import dynamic from 'next/dynamic';
+
+const LiveMap = dynamic(() => import('@/components/LiveMap'), { 
+  ssr: false,
+  loading: () => <div style={{height: '100%', width: '100%', minHeight: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e293b', color: '#94a3b8', borderRadius: '16px'}}>Loading Map...</div>
+});
 
 const HeaderContainer = styled.div`
   display: flex;
@@ -117,8 +122,30 @@ const AIReportButton = styled(ShimmerButton)`
   font-weight: 600;
 `;
 
+// --- Bento Grid Layout ---
+const BentoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 24px;
+  padding: 24px;
+  height: calc(100vh - 140px); /* Fill remaining screen */
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+`;
+
+const MapContainerWrapper = styled.div`
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+`;
+
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<any>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,13 +153,6 @@ export default function DashboardPage() {
   // Verify State
   const [verifyId, setVerifyId] = useState("");
   const [verifying, setVerifying] = useState(false);
-
-  useEffect(() => {
-    // Simulate loading delay to show skeleton
-    setTimeout(() => {
-        getDashboardSummaryAction().then(setSummary);
-    }, 1500);
-  }, []);
 
   const handleGenerateReport = async () => {
     setLoadingReport(true);
@@ -161,10 +181,6 @@ export default function DashboardPage() {
         const result = await startDemoSimulationAction();
         if (result.success) {
             toast.success("Demo Simulation Started!");
-            // Refresh summary to show new active truck
-            setTimeout(() => {
-                getDashboardSummaryAction().then(setSummary);
-            }, 1000);
         } else {
             toast.error(result.error || "Failed to start demo");
         }
@@ -186,8 +202,6 @@ export default function DashboardPage() {
         if (result.success) {
             toast.success("Shipment Verified & Completed!");
             setVerifyId("");
-            // Refresh summary
-            getDashboardSummaryAction().then(setSummary);
         } else {
             toast.error(result.error || "Verification Failed");
         }
@@ -199,7 +213,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main>
+    <main style={{ minHeight: '100vh', background: '#0f172a' }}>
       <HeaderContainer>
         <Title>Logistics Command Center</Title>
         <ButtonGroup>
@@ -255,7 +269,12 @@ export default function DashboardPage() {
         </button>
       </VerifySection>
       
-      {summary ? <Dashboard summary={summary} /> : <DashboardSkeleton />}
+      <BentoGrid>
+        <LiveStats />
+        <MapContainerWrapper>
+          <LiveMap />
+        </MapContainerWrapper>
+      </BentoGrid>
 
       <ReportModal 
         isOpen={isModalOpen} 
