@@ -168,24 +168,34 @@ export default function AuthCard() {
               break;
             default:
               toast.error('Unknown role: ' + result.role);
-              // Optional: router.push('/');
+              setLoading(false);
           }
+          // Don't set loading false here, let it shimmer until redirect
         } else {
           toast.error(result.error || 'Login Failed');
+          setLoading(false);
         }
       } else {
         const result = await registerAction(formData);
         if (result.success) {
           toast.success('Account Created! Please Login.');
           setIsLogin(true);
+          setLoading(false);
         } else {
           toast.error(result.error || 'Registration Failed');
+          setLoading(false);
         }
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
-    } finally {
       setLoading(false);
+    } finally {
+      // Only stop loading if we didn't redirect (i.e., failure)
+      // If success, we want to keep loading until the page unmounts/redirects
+      // But we don't have a simple way to know if it was success here without checking result again
+      // So we'll rely on the fact that we return early or push router on success.
+      // Actually, we didn't return early.
+      // Let's move setLoading(false) to the failure blocks or catch.
     }
   };
 

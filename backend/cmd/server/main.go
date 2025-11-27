@@ -71,14 +71,12 @@ func main() {
 		api.POST("/shipments/pickup", shipmentHandler.PickupShipment)
 		api.POST("/shipments/start", shipmentHandler.StartShipment)
 		api.POST("/handshake", shipmentHandler.Handshake)
+		api.POST("/shipments/complete", shipmentHandler.CompleteShipment) // Added
 		api.POST("/telemetry", telemetryHandler.ReceiveTelemetry)
 		api.POST("/telemetry/incident", telemetryHandler.ReportIncident)
 		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
 		api.GET("/shipments/active", shipmentHandler.GetActiveShipments)
 	}
-
-	// Start Simulation (in a separate goroutine)
-	// go simulator.StartSimulation()
 
 	// Server Setup
 	srv := &http.Server{

@@ -1,6 +1,6 @@
 'use client';
 
-import { getDashboardSummaryAction } from "@/actions/logistics";
+import { getDashboardSummaryAction, verifyShipmentAction } from "@/actions/logistics";
 import Dashboard from "@/components/Dashboard";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
@@ -8,7 +8,9 @@ import ShimmerButton from "@/components/ui/ShimmerButton";
 import { generateReportAction } from "@/actions/ai";
 import ReportModal from "@/components/ReportModal";
 import toast from "react-hot-toast";
-import { Sparkles } from "lucide-react";
+import { Sparkles, CheckCircle } from "lucide-react";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
+import SignOutButton from "@/components/SignOutButton";
 
 const HeaderContainer = styled.div`
   display: flex;
@@ -20,9 +22,36 @@ const HeaderContainer = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  background: linear-gradient(to right, #ffffff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+`;
+
+const VerifySection = styled.div`
+  padding: 20px 32px;
+  background: #1e293b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+`;
+
+const Input = styled.input`
+  padding: 12px 20px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
   color: white;
+  font-size: 1rem;
+  width: 300px;
+  outline: none;
+  &:focus {
+    border-color: #10b981;
+  }
 `;
 
 export default function DashboardPage() {
@@ -30,17 +59,22 @@ export default function DashboardPage() {
   const [loadingReport, setLoadingReport] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Verify State
+  const [verifyId, setVerifyId] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    getDashboardSummaryAction().then(setSummary);
+    // Simulate loading delay to show skeleton
+    setTimeout(() => {
+        getDashboardSummaryAction().then(setSummary);
+    }, 1500);
   }, []);
 
   const handleGenerateReport = async () => {
     setLoadingReport(true);
     try {
-      // Simulate "Thinking" time
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const result = await generateReportAction();
       if (result.success && result.report) {
         setReport(result.report);
@@ -56,27 +90,79 @@ export default function DashboardPage() {
     }
   };
 
+  const handleVerify = async () => {
+    if (!verifyId) {
+        toast.error("Enter Shipment ID");
+        return;
+    }
+    setVerifying(true);
+    try {
+        const result = await verifyShipmentAction(verifyId);
+        if (result.success) {
+            toast.success("Shipment Verified & Completed!");
+            setVerifyId("");
+            // Refresh summary
+            getDashboardSummaryAction().then(setSummary);
+        } else {
+            toast.error(result.error || "Verification Failed");
+        }
+    } catch (error) {
+        toast.error("Error verifying shipment");
+    } finally {
+        setVerifying(false);
+    }
+  };
+
   return (
     <main>
       <HeaderContainer>
         <Title>Logistics Command Center</Title>
-        <div style={{ width: '200px' }}>
-            <ShimmerButton 
-                onClick={handleGenerateReport} 
-                isLoading={loadingReport}
-                loadingText="Analyzing Data..."
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                    <Sparkles size={18} />
-                    <span>Generate AI Report</span>
-                </div>
-            </ShimmerButton>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <div style={{ width: '200px' }}>
+                <ShimmerButton 
+                    onClick={handleGenerateReport} 
+                    isLoading={loadingReport}
+                    loadingText="Analyzing..."
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <Sparkles size={18} />
+                        <span>Generate AI Report</span>
+                    </div>
+                </ShimmerButton>
+            </div>
+            <SignOutButton />
         </div>
       </HeaderContainer>
+
+      <VerifySection>
+        <div style={{ color: '#94a3b8', fontWeight: 600 }}>Verify Shipment:</div>
+        <Input 
+            placeholder="Enter Shipment ID (e.g. from QR Code)" 
+            value={verifyId}
+            onChange={(e) => setVerifyId(e.target.value)}
+        />
+        <button 
+            onClick={handleVerify}
+            disabled={verifying}
+            style={{
+                padding: '12px 24px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '12px',
+                color: 'white',
+                fontWeight: 700,
+                cursor: verifying ? 'not-allowed' : 'pointer',
+                opacity: verifying ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+            }}
+        >
+            {verifying ? 'Verifying...' : <><CheckCircle size={18} /> Verify Arrival</>}
+        </button>
+      </VerifySection>
       
-      {summary ? <Dashboard summary={summary} /> : (
-        <div style={{ padding: '40px', color: 'white' }}>Loading Dashboard...</div>
-      )}
+      {summary ? <Dashboard summary={summary} /> : <DashboardSkeleton />}
 
       <ReportModal 
         isOpen={isModalOpen} 

@@ -173,3 +173,40 @@ export async function checkShipmentStatus(shipmentId: string) {
     return { status: 'UNKNOWN' };
   }
 }
+
+export async function verifyShipmentAction(shipmentId: string) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  try {
+    // We use the existing handshake endpoint which updates status to DELIVERED
+    // and sets completed_at.
+    // Note: The handshake endpoint expects "pickup_code" usually for pickup,
+    // but for delivery, we might need a different endpoint or logic.
+    // Wait, "handshake" in backend (PickupShipment) is for PICKUP (status -> IN_TRANSIT).
+    // We need a DELIVERY endpoint.
+    // Checking backend... we don't have a specific "CompleteShipment" handler exposed yet?
+    // We have `UpdateShipmentStatus` in `simulator.go` but that's internal.
+    // We have `PickupShipment` (POST /api/shipments/pickup).
+    // We DO NOT have a `CompleteShipment` endpoint in `shipment.go`.
+    // However, the user asked to "Calls Backend: UPDATE shipments SET status = 'DELIVERED'..."
+    // I should probably add a server action that does this directly via DB or adds a new endpoint.
+    // Since I can't easily add a new backend endpoint without restarting backend (which I can do),
+    // let's see if I can use `fetchClient` to call a new endpoint I'll create?
+    // Or just use a direct DB call if I was in backend.
+    // I am in frontend. I MUST call an API.
+    // Let's assume I will add `POST /api/shipments/complete` to backend.
+    
+    // BUT, for now, I will implement the action to call it, and then I will go update the backend.
+    const result = await fetchClient<{ success: boolean }>("/api/shipments/complete", {
+      method: "POST",
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: JSON.stringify({ shipment_id: shipmentId }),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Verification failed:", error);
+    return { success: false, error: "Failed to verify shipment" };
+  }
+}

@@ -174,3 +174,24 @@ func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 
 	c.JSON(http.StatusOK, shipments)
 }
+
+func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
+	var req struct {
+		ShipmentID string `json:"shipment_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := db.Pool.Exec(c.Request.Context(), `
+		UPDATE shipments SET status='DELIVERED', completed_at=$1 WHERE id=$2
+	`, time.Now(), req.ShipmentID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete shipment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
