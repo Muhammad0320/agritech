@@ -18,7 +18,7 @@ interface ButtonProps {
   $variant?: 'primary' | 'danger' | 'neutral' | 'glass';
 }
 
-const StyledButton = styled.button<ButtonProps>`
+const StyledButton = styled.button<ButtonProps & { $isLoading?: boolean }>`
   position: relative;
   width: 100%;
   height: 56px;
@@ -32,8 +32,8 @@ const StyledButton = styled.button<ButtonProps>`
   transition: transform 0.2s;
 
   /* Normal State Colors (when not loading) */
-  background: ${({ $variant, isLoading }) => {
-    if (isLoading) return '#1e293b';
+  background: ${({ $variant, $isLoading }) => {
+    if ($isLoading) return '#1e293b';
     switch ($variant) {
       case 'danger': return 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
       case 'neutral': return '#334155';
@@ -63,7 +63,7 @@ const StyledButton = styled.button<ButtonProps>`
   }
 
   /* 2. The Spinner Layer (::before) */
-  ${({ isLoading }) => isLoading && css`
+  ${({ $isLoading }) => $isLoading && css`
     &::before {
       content: '';
       position: absolute;
@@ -79,7 +79,7 @@ const StyledButton = styled.button<ButtonProps>`
   `}
 
   /* 3. The Mask Layer (::after) */
-  ${({ isLoading }) => isLoading && css`
+  ${({ $isLoading }) => $isLoading && css`
     &::after {
       content: '';
       position: absolute;
@@ -109,7 +109,7 @@ export default function ShimmerButton({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & ButtonProps) {
   return (
     <StyledButton 
-      isLoading={isLoading} 
+      $isLoading={isLoading} 
       $variant={$variant}
       disabled={isLoading || props.disabled} 
       {...props}

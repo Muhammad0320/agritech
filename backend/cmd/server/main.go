@@ -61,7 +61,7 @@ func main() {
 	r.POST("/login", authHandler.Login)
 	r.POST("/register", authHandler.Register)
 	r.GET("/status", queryHandler.GetTruckStatus)
-	r.GET("/simulate/demo", telemetryHandler.SimulateDemo) // Added Demo Trigger
+	r.GET("/api/simulate/demo", telemetryHandler.SimulateDemo) // Added Demo Trigger
 
 	// Protected Routes
 	api := r.Group("/api")

@@ -32,10 +32,12 @@ const Title = styled.h1`
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(to right, #ffffff, #94a3b8);
+  background: linear-gradient(to right, #ffffff 20%, #94a3b8 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  display: inline-block;
 
   @media (max-width: 768px) {
     font-size: 1.5rem;
@@ -44,7 +46,7 @@ const Title = styled.h1`
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
 
   @media (max-width: 768px) {
@@ -54,6 +56,34 @@ const ButtonGroup = styled.div`
     & > * {
       flex: 1;
     }
+  }
+`;
+
+const DemoButton = styled.button`
+  height: 48px;
+  padding: 0 24px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 `;
 
@@ -78,6 +108,13 @@ const Input = styled.input`
   &:focus {
     border-color: #10b981;
   }
+`;
+
+const AIReportButton = styled(ShimmerButton)`
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  padding: 0 24px;
+  font-weight: 600;
 `;
 
 export default function DashboardPage() {
@@ -166,8 +203,13 @@ export default function DashboardPage() {
       <HeaderContainer>
         <Title>Logistics Command Center</Title>
         <ButtonGroup>
-            <div style={{ width: '200px', height: '48px' }}>
-                <ShimmerButton 
+            <DemoButton onClick={handleStartDemo} disabled={startingDemo}>
+                <Play size={18} fill="currentColor" />
+                {startingDemo ? "Starting..." : "Start Demo"}
+            </DemoButton>
+
+            <div style={{ height: '48px' }}>
+                <AIReportButton 
                     onClick={handleGenerateReport} 
                     isLoading={loadingReport}
                     loadingText="Analyzing..."
@@ -178,25 +220,10 @@ export default function DashboardPage() {
                         <Sparkles size={18} />
                         <span>Generate AI Report</span>
                     </div>
-                </ShimmerButton>
+                </AIReportButton>
             </div>
-            <div style={{ width: '160px', height: '48px' }}>
-                <ShimmerButton 
-                    onClick={handleStartDemo} 
-                    isLoading={startingDemo}
-                    loadingText="Starting..."
-                    $variant="neutral"
-                    style={{ height: '100%' }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                        <Play size={18} />
-                        <span>Start Demo</span>
-                    </div>
-                </ShimmerButton>
-            </div>
-            <div style={{ height: '48px' }}>
-                <SignOutButton />
-            </div>
+            
+            <SignOutButton />
         </ButtonGroup>
       </HeaderContainer>
 

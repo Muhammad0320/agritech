@@ -228,72 +228,88 @@ func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
-
 func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
-	// 1. Create Shipment (Ilorin -> Jebba)
-	shipmentID := uuid.New().String()
-	truckID := "DEMO-GOD-01"
-	
-	// Ilorin
-	startLat, startLon := 8.5000, 4.5500
-	// Jebba
-	endLat, endLon := 9.1333, 4.8333
+    // 1. Define IDs
+    shipmentID := uuid.New().String()
+    truckID := "DEMO-GOD-01"
 
-	_, err := db.Pool.Exec(c.Request.Context(), `
-		INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code)
-		VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO12')
-	`, shipmentID, truckID, startLat, startLon, endLat, endLon)
+    // ---------------------------------------------------------
+    // FIX: Create the Demo Driver first so the Foreign Key exists
+    // ---------------------------------------------------------
+    _, err := db.Pool.Exec(c.Request.Context(), `
+        INSERT INTO users (id, name, email, password, role)
+        VALUES ($1, 'AI Auto-Pilot', 'demo@agritrack.com', 'demo123', 'DRIVER')
+        ON CONFLICT (id) DO NOTHING
+    `, truckID)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo shipment"})
-		return
-	}
+    if err != nil {
+        log.Printf("Failed to create demo driver: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo driver"})
+        return
+    }
+    // ---------------------------------------------------------
 
-	// 2. Async Loop
-	go func() {
-		steps := 20
-		for i := 0; i <= steps; i++ {
-			progress := float64(i) / float64(steps)
-			lat := startLat + (endLat-startLat)*progress
-			lon := startLon + (endLon-startLon)*progress
+    // Ilorin
+    startLat, startLon := 8.5000, 4.5500
+    // Jebba
+    endLat, endLon := 9.1333, 4.8333
 
-			// Send Telemetry
-			event := models.LogisticsEvent{
-				TruckID:    truckID,
-				ShipmentID: shipmentID,
-				Time:       time.Now(),
-				Latitude:   lat,
-				Longitude:  lon,
-				EventType:  "moving",
-				Speed:      60.0,
-			}
-			// Use internal channel to avoid HTTP overhead
-			h.eventChan <- event
+    // 2. Create Shipment
+    _, err = db.Pool.Exec(c.Request.Context(), `
+        INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, start_time)
+        VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO12', NOW())
+    `, shipmentID, truckID, startLat, startLon, endLat, endLon)
 
-			// Step 5: BAD_ROAD
-			if i == 5 {
-				db.Pool.Exec(context.Background(), `
-					INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
-					VALUES ($1, $2, $3, $4, 'BAD_ROAD', 'Simulated Bad Road', 2, NOW())
-				`, truckID, shipmentID, lat, lon)
-			}
+    if err != nil {
+        log.Printf("Failed to create demo shipment: %v", err) // Log the actual error
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo shipment"})
+        return
+    }
 
-			// Step 10: POLICE
-			if i == 10 {
-				db.Pool.Exec(context.Background(), `
-					INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
-					VALUES ($1, $2, $3, $4, 'POLICE_CHECKPOINT', 'Simulated Checkpoint', 1, NOW())
-				`, truckID, shipmentID, lat, lon)
-			}
+    // 3. Async Loop (The Movie Script)
+    go func() {
+        steps := 20
+        for i := 0; i <= steps; i++ {
+            progress := float64(i) / float64(steps)
+            lat := startLat + (endLat-startLat)*progress
+            lon := startLon + (endLon-startLon)*progress
 
-			time.Sleep(1 * time.Second)
-		}
+            // Send Telemetry
+            event := models.LogisticsEvent{
+                TruckID:    truckID,
+                ShipmentID: shipmentID,
+                Time:       time.Now(),
+                Latitude:   lat,
+                Longitude:  lon,
+                EventType:  "moving",
+                Speed:      60.0,
+            }
+            h.eventChan <- event
 
-		// Step 20: DELIVERED
-		db.Pool.Exec(context.Background(), `
-			UPDATE shipments SET status='DELIVERED', completed_at=NOW() WHERE id=$1
-		`, shipmentID)
-	}()
+            // Step 5: BAD_ROAD
+            if i == 5 {
+                db.Pool.Exec(context.Background(), `
+                    INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
+                    VALUES ($1, $2, $3, $4, 'BAD_ROAD', 'Simulated Bad Road', 2, NOW())
+                `, truckID, shipmentID, lat, lon)
+            }
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Demo simulation started", "shipment_id": shipmentID})
+            // Step 10: POLICE
+            if i == 10 {
+                db.Pool.Exec(context.Background(), `
+                    INSERT INTO logistics_incidents (truck_id, shipment_id, latitude, longitude, incident_type, description, severity, time)
+                    VALUES ($1, $2, $3, $4, 'POLICE_CHECKPOINT', 'Simulated Checkpoint', 1, NOW())
+                `, truckID, shipmentID, lat, lon)
+            }
+
+            time.Sleep(1 * time.Second)
+        }
+
+        // Step 20: DELIVERED
+        db.Pool.Exec(context.Background(), `
+            UPDATE shipments SET status='DELIVERED', completed_at=NOW() WHERE id=$1
+        `, shipmentID)
+    }()
+
+    c.JSON(http.StatusOK, gin.H{"success": true, "message": "Demo simulation started", "shipment_id": shipmentID})
 }
