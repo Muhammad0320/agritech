@@ -1,6 +1,6 @@
 'use client';
 
-import { getDashboardSummaryAction, verifyShipmentAction } from "@/actions/logistics";
+import { getDashboardSummaryAction, verifyShipmentAction, startDemoSimulationAction } from "@/actions/logistics";
 import Dashboard from "@/components/Dashboard";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
@@ -8,7 +8,7 @@ import ShimmerButton from "@/components/ui/ShimmerButton";
 import { generateReportAction } from "@/actions/ai";
 import ReportModal from "@/components/ReportModal";
 import toast from "react-hot-toast";
-import { Sparkles, CheckCircle } from "lucide-react";
+import { Sparkles, CheckCircle, Play } from "lucide-react";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import SignOutButton from "@/components/SignOutButton";
 
@@ -116,6 +116,28 @@ export default function DashboardPage() {
     }
   };
 
+  const [startingDemo, setStartingDemo] = useState(false);
+
+  const handleStartDemo = async () => {
+    setStartingDemo(true);
+    try {
+        const result = await startDemoSimulationAction();
+        if (result.success) {
+            toast.success("Demo Simulation Started!");
+            // Refresh summary to show new active truck
+            setTimeout(() => {
+                getDashboardSummaryAction().then(setSummary);
+            }, 1000);
+        } else {
+            toast.error(result.error || "Failed to start demo");
+        }
+    } catch (error) {
+        toast.error("Error starting demo");
+    } finally {
+        setStartingDemo(false);
+    }
+  };
+
   const handleVerify = async () => {
     if (!verifyId) {
         toast.error("Enter Shipment ID");
@@ -155,6 +177,20 @@ export default function DashboardPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                         <Sparkles size={18} />
                         <span>Generate AI Report</span>
+                    </div>
+                </ShimmerButton>
+            </div>
+            <div style={{ width: '160px', height: '48px' }}>
+                <ShimmerButton 
+                    onClick={handleStartDemo} 
+                    isLoading={startingDemo}
+                    loadingText="Starting..."
+                    $variant="neutral"
+                    style={{ height: '100%' }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                        <Play size={18} />
+                        <span>Start Demo</span>
                     </div>
                 </ShimmerButton>
             </div>
