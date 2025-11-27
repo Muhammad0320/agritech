@@ -4,12 +4,24 @@ import { useEffect, useState, useRef, Fragment } from 'react';
 import { getLiveTrucksAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
+
+// Helper component for auto-zoom
+function ChangeView({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [bounds, map]);
+  return null;
+}
 
 export default function LiveMap() {
   const [trucks, setTrucks] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [bounds, setBounds] = useState<L.LatLngBoundsExpression | null>(null);
   
   // Keep track of previous trucks to detect arrivals
   const prevTrucksRef = useRef<Set<string>>(new Set());
@@ -48,6 +60,22 @@ export default function LiveMap() {
       // Update Ref
       prevTrucksRef.current = currentIds;
       setTrucks(data);
+
+      // Calculate Bounds
+      if (data.length > 0) {
+        const points: L.LatLngExpression[] = [];
+        data.forEach((t: any) => {
+           const lat = t.lat ?? t.origin_lat;
+           const lon = t.lon ?? t.origin_lon;
+           if (lat !== undefined && lon !== undefined) {
+             points.push([lat, lon]);
+             points.push([t.dest_lat, t.dest_lon]);
+           }
+        });
+        if (points.length > 0) {
+          setBounds(L.latLngBounds(points));
+        }
+      }
     };
 
     fetchTrucks();
@@ -78,8 +106,9 @@ export default function LiveMap() {
         center={[8.9, 4.6]} 
         zoom={7} 
         scrollWheelZoom={false} // Stops annoying zoom on scroll
-        style={{ height: "100%", width: "100%", minHeight: "500px" }}
+        style={{ height: "600px", width: "100%", position: 'relative', zIndex: 0 }}
       >
+        <ChangeView bounds={bounds} />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
@@ -113,9 +142,9 @@ export default function LiveMap() {
                 ]}
                 pathOptions={{ 
                   color: '#3b82f6', 
-                  weight: 2, 
+                  weight: 3, 
                   dashArray: '5, 10', 
-                  opacity: 0.6 
+                  opacity: 0.8 
                 }} 
               />
             </Fragment>
