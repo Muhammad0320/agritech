@@ -76,7 +76,8 @@ func main() {
 		api.POST("/telemetry/incident", telemetryHandler.ReportIncident)
 		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
 		api.GET("/shipments/active", shipmentHandler.GetActiveShipments)
-		api.GET("/dashboard/summary", dashboardHandler.GetSummary) // Moved here
+		api.GET("/dashboard/summary", dashboardHandler.GetSummary)
+		api.GET("/simulate/demo", telemetryHandler.SimulateDemo) // Added Demo Trigger
 	}
 
 	// Server Setup
