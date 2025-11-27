@@ -19,16 +19,42 @@ const HeaderContainer = styled.div`
   padding: 24px 32px;
   background: #0f172a;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
 `;
 
 const Title = styled.h1`
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
   background: linear-gradient(to right, #ffffff, #94a3b8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 20px;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-wrap: wrap;
+    
+    & > * {
+      flex: 1;
+    }
+  }
 `;
 
 const VerifySection = styled.div`
@@ -117,12 +143,13 @@ export default function DashboardPage() {
     <main>
       <HeaderContainer>
         <Title>Logistics Command Center</Title>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <ButtonGroup>
             <div style={{ width: '200px' }}>
                 <ShimmerButton 
                     onClick={handleGenerateReport} 
                     isLoading={loadingReport}
                     loadingText="Analyzing..."
+                    $variant="glass"
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                         <Sparkles size={18} />
@@ -131,7 +158,7 @@ export default function DashboardPage() {
                 </ShimmerButton>
             </div>
             <SignOutButton />
-        </div>
+        </ButtonGroup>
       </HeaderContainer>
 
       <VerifySection>

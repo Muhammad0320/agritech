@@ -14,7 +14,7 @@ const rotate = keyframes`
 interface ButtonProps {
   isLoading?: boolean;
   loadingText?: string;
-  $variant?: 'primary' | 'danger' | 'neutral';
+  $variant?: 'primary' | 'danger' | 'neutral' | 'glass';
 }
 
 const ButtonContainer = styled.button<ButtonProps & { $isLoading?: boolean }>`
@@ -63,18 +63,25 @@ const ContentLayer = styled.div<{ $isLoading?: boolean; $variant?: string }>`
     $isLoading ? '#1e293b' : 
     $variant === 'danger' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
     $variant === 'neutral' ? '#334155' :
+    $variant === 'glass' ? 'rgba(16, 185, 129, 0.1)' :
     'linear-gradient(135deg, #10b981 0%, #059669 100%)'
   };
+  border: ${({ $variant }) => $variant === 'glass' ? '1px solid #10b981' : 'none'};
+  color: ${({ $variant }) => $variant === 'glass' ? '#10b981' : 'white'};
   border-radius: ${({ $isLoading }) => $isLoading ? '10px' : '12px'};
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+  transition: background 0.2s;
+
+  &:hover {
+    background: ${({ $variant }) => $variant === 'glass' ? 'rgba(16, 185, 129, 0.2)' : ''};
+  }
 `;
 
 export default function ShimmerButton({ 
