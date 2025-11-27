@@ -233,12 +233,9 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
     shipmentID := uuid.New().String()
     truckID := "DEMO-GOD-01"
 
-    // ---------------------------------------------------------
-    // FIX: Create the Demo Driver first so the Foreign Key exists
-    // ---------------------------------------------------------
-    _, err := db.Pool.Exec(c.Request.Context(), `
-        INSERT INTO users (id, name, email, password, role)
-        VALUES ($1, 'AI Auto-Pilot', 'demo@agritrack.com', 'demo123', 'DRIVER')
+_, err := db.Pool.Exec(c.Request.Context(), `
+        INSERT INTO users (id, email, password, role)
+        VALUES ($1, 'demo@agritrack.com', 'demo123456', 'DRIVER')
         ON CONFLICT (id) DO NOTHING
     `, truckID)
 
