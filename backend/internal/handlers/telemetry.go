@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -223,7 +225,6 @@ func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
 			"description":   desc,
 			"severity":      severity,
 			"time":          t,
-```
 		})
 	}
 
@@ -340,4 +341,3 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"success": true, "message": "Fleet simulation started (5 Trucks)"})
 }
-```
