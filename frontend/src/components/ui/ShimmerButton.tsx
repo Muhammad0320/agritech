@@ -1,18 +1,6 @@
 'use client';
 
-import styled, { keyframes, css } from 'styled-components';
-
-const rotate = keyframes`
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-`;
-
-'use client';
-
+import React from 'react';
 import styled, { keyframes, css } from 'styled-components';
 
 const rotate = keyframes`
