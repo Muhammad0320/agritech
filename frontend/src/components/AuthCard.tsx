@@ -156,7 +156,7 @@ export default function AuthCard() {
         if (result.success) {
           toast.success('Welcome back!');
           
-          switch (result.role) {
+          switch (result.role?.toUpperCase()) {
             case 'DRIVER':
               router.push('/driver');
               break;

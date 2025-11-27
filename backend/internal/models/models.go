@@ -36,7 +36,7 @@ type IncidentRequest struct {
 	ShipmentID   string  `json:"shipment_id" binding:"required"`
 	Latitude     float64 `json:"latitude" binding:"required,latitude"`
 	Longitude    float64 `json:"longitude" binding:"required,longitude"`
-	IncidentType string  `json:"incident_type" binding:"required,oneof=POLICE_CHECKPOINT BREAKDOWN ACCIDENT TRAFFIC"`
+	IncidentType string  `json:"incident_type" binding:"required,oneof=POLICE_CHECKPOINT BREAKDOWN ACCIDENT TRAFFIC BAD_ROAD"`
 	Description  string  `json:"description" binding:"required"`
 	Severity     int     `json:"severity" binding:"required,min=1,max=5"`
 }

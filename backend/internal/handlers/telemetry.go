@@ -263,6 +263,8 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
 			truckID := fmt.Sprintf("DEMO-TRUCK-%02d", index+1)
 			shipmentID := uuid.New().String()
 
+			fmt.Println("shipmentID -------- ", shipmentID)
+
 			// Create User & Truck (Ensure they exist)
 			hashedPassword, _ := utils.HashPassword("demo")
 			db.Pool.Exec(context.Background(), `

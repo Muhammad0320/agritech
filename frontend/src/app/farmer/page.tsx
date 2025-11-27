@@ -116,8 +116,13 @@ export default function FarmerPage() {
   const [destCoords, setDestCoords] = useState<{lat: number, lng: number} | null>(null);
   const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
 
+  const locationRequested = React.useRef(false);
+
   // Get GPS on Load
   useEffect(() => {
+    if (locationRequested.current) return;
+    locationRequested.current = true;
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
