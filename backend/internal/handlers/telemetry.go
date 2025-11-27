@@ -233,37 +233,60 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
     shipmentID := uuid.New().String()
     truckID := "DEMO-GOD-01"
 
-_, err := db.Pool.Exec(c.Request.Context(), `
-        INSERT INTO users (id, email, password, role)
-        VALUES ($1, 'demo@agritrack.com', 'demo123456', 'DRIVER')
+    ctx := c.Request.Context()
+
+    // ---------------------------------------------------------
+    // STEP 1: Create the User (So it exists for Auth logic)
+    // ---------------------------------------------------------
+    _, err := db.Pool.Exec(ctx, `
+        INSERT INTO users (id, email, password, role, name)
+        VALUES ($1, 'demo@agritrack.com', 'demo123', 'DRIVER', 'AI Bot')
         ON CONFLICT (id) DO NOTHING
     `, truckID)
 
     if err != nil {
-        log.Printf("Failed to create demo driver: %v", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo driver"})
+        // If this fails (e.g. column mismatch), log it but don't stop. 
+        // The TRUCK table is the critical one for the shipment FK.
+        log.Printf("Warning: Failed to create demo user: %v", err)
+    }
+
+    // ---------------------------------------------------------
+    // STEP 2: Create the Truck (CRITICAL FOR FOREIGN KEY)
+    // ---------------------------------------------------------
+    _, err = db.Pool.Exec(ctx, `
+        INSERT INTO trucks (id, driver_name, plate_number)
+        VALUES ($1, 'AI Auto-Pilot', 'DEMO-KWARA-01')
+        ON CONFLICT (id) DO NOTHING
+    `, truckID)
+
+    if err != nil {
+        log.Printf("Failed to create demo truck: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo truck"})
         return
     }
-    // ---------------------------------------------------------
 
+    // ---------------------------------------------------------
+    // STEP 3: Create Shipment (Now safe because Truck exists)
+    // ---------------------------------------------------------
     // Ilorin
     startLat, startLon := 8.5000, 4.5500
     // Jebba
     endLat, endLon := 9.1333, 4.8333
 
-    // 2. Create Shipment
-    _, err = db.Pool.Exec(c.Request.Context(), `
+    _, err = db.Pool.Exec(ctx, `
         INSERT INTO shipments (id, truck_id, origin_lat, origin_lon, dest_lat, dest_lon, status, pickup_code, start_time)
         VALUES ($1, $2, $3, $4, $5, $6, 'IN_TRANSIT', 'DEMO12', NOW())
     `, shipmentID, truckID, startLat, startLon, endLat, endLon)
 
     if err != nil {
-        log.Printf("Failed to create demo shipment: %v", err) // Log the actual error
+        log.Printf("Failed to create demo shipment: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo shipment"})
         return
     }
 
-    // 3. Async Loop (The Movie Script)
+    // ---------------------------------------------------------
+    // STEP 4: The Async Movie Script
+    // ---------------------------------------------------------
     go func() {
         steps := 20
         for i := 0; i <= steps; i++ {

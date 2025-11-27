@@ -60,10 +60,11 @@ func InitDB(pool *pgxpool.Pool) error {
 	queries := []string{
 		// Users table
 		`CREATE TABLE IF NOT EXISTS users (
-			id SERIAL PRIMARY KEY,
-			username TEXT UNIQUE NOT NULL,
-			password TEXT NOT NULL, -- In production, hash this!
-			role TEXT NOT NULL -- 'farmer', 'driver'
+			id TEXT PRIMARY KEY,          -- Changed from SERIAL to TEXT to support UUIDs
+			email TEXT UNIQUE NOT NULL,   -- Changed from username to email
+			name TEXT,                    -- Added to support Profile Name
+			password TEXT NOT NULL,
+			role TEXT NOT NULL
 		);`,
 		// Trucks metadata table
 		`CREATE TABLE IF NOT EXISTS trucks (
