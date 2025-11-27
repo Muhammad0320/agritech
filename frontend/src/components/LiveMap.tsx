@@ -135,9 +135,10 @@ export default function LiveMap() {
        <div className="absolute top-4 right-4 z-[1000]">
           <button
             onClick={() => setViewMode(prev => prev === 'FLEET' ? 'HEATMAP' : 'FLEET')}
-            className="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 shadow-lg font-bold hover:bg-slate-700 transition-colors flex items-center gap-2"
+            className="bg-slate-900/90 backdrop-blur-md text-slate-100 px-5 py-2.5 rounded-xl border border-slate-700/50 shadow-2xl font-semibold hover:bg-slate-800/90 hover:border-slate-600 hover:shadow-emerald-500/10 transition-all duration-300 flex items-center gap-3 group"
           >
-            {viewMode === 'FLEET' ? '🚚 Fleet View' : '🔥 Risk Heatmap'}
+            <span className={`w-2 h-2 rounded-full transition-colors duration-300 ${viewMode === 'FLEET' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]'}`}></span>
+            {viewMode === 'FLEET' ? 'Fleet View' : 'Risk Heatmap'}
           </button>
        </div>
 
