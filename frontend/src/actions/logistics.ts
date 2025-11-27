@@ -261,3 +261,20 @@ export async function startDemoSimulationAction() {
     return { success: false, error: "Failed to start demo simulation" };
   }
 }
+
+export async function getAllIncidentsAction() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  try {
+    const incidents = await fetchClient<{ latitude: number, longitude: number, incident_type: string }[]>("/api/incidents/all", {
+      method: "GET",
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      cache: "no-store"
+    });
+    return incidents;
+  } catch (error) {
+    console.error("Failed to fetch all incidents:", error);
+    return [];
+  }
+}

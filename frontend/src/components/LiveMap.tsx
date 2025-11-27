@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef, Fragment } from 'react';
-import { getLiveTrucksAction } from '@/actions/logistics';
+import { getLiveTrucksAction, getAllIncidentsAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 
 // Helper component for auto-zoom
@@ -20,12 +20,14 @@ function ChangeView({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
 
 export default function LiveMap() {
   const [trucks, setTrucks] = useState<any[]>([]);
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'FLEET' | 'HEATMAP'>('FLEET');
   const [isMounted, setIsMounted] = useState(false);
   const [bounds, setBounds] = useState<L.LatLngBoundsExpression | null>(null);
   
   // Keep track of previous trucks to detect arrivals
   const prevTrucksRef = useRef<Set<string>>(new Set());
-
+  
   useEffect(() => {
     setIsMounted(true);
     // @ts-ignore
@@ -37,7 +39,10 @@ export default function LiveMap() {
     });
   }, []);
 
+  // Fetch Trucks (Fleet Mode)
   useEffect(() => {
+    if (viewMode !== 'FLEET') return;
+
     const fetchTrucks = async () => {
       const data = await getLiveTrucksAction() || [];
       
@@ -80,7 +85,22 @@ export default function LiveMap() {
     fetchTrucks();
     const interval = setInterval(fetchTrucks, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [viewMode]);
+
+  // Fetch Incidents (Heatmap Mode)
+  useEffect(() => {
+    if (viewMode === 'HEATMAP') {
+      const fetchIncidents = async () => {
+        const data = await getAllIncidentsAction();
+        setIncidents(data);
+         if (data.length > 0) {
+            const points: L.LatLngExpression[] = data.map((i: any) => [i.latitude, i.longitude]);
+            setBounds(L.latLngBounds(points));
+         }
+      };
+      fetchIncidents();
+    }
+  }, [viewMode]);
 
   if (!isMounted) return <div className="h-full w-full min-h-[500px] bg-slate-900 animate-pulse rounded-xl flex items-center justify-center text-slate-500">Loading Map...</div>;
 
@@ -99,8 +119,28 @@ export default function LiveMap() {
     iconAnchor: [7, 7]
   });
 
+  const getIncidentColor = (type: string) => {
+    switch (type) {
+      case 'POLICE_CHECKPOINT': return '#ef4444'; // Red
+      case 'BAD_ROAD': return '#a855f7'; // Purple
+      case 'TRAFFIC': return '#f59e0b'; // Orange
+      case 'ACCIDENT': return '#ef4444'; // Red
+      default: return '#3b82f6'; // Blue
+    }
+  };
+
   return (
     <div className="h-full w-full min-h-[500px] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative z-0">
+       {/* Toggle Button */}
+       <div className="absolute top-4 right-4 z-[1000]">
+          <button
+            onClick={() => setViewMode(prev => prev === 'FLEET' ? 'HEATMAP' : 'FLEET')}
+            className="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-600 shadow-lg font-bold hover:bg-slate-700 transition-colors flex items-center gap-2"
+          >
+            {viewMode === 'FLEET' ? '🚚 Fleet View' : '🔥 Risk Heatmap'}
+          </button>
+       </div>
+
        <MapContainer 
         center={[8.9, 4.6]} 
         zoom={7} 
@@ -113,7 +153,7 @@ export default function LiveMap() {
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         />
 
-        {trucks.map((truck) => {
+        {viewMode === 'FLEET' && trucks.map((truck) => {
           const currentLat = truck.lat ?? truck.origin_lat;
           const currentLon = truck.lon ?? truck.origin_lon;
 
@@ -149,6 +189,27 @@ export default function LiveMap() {
             </Fragment>
           );
         })}
+
+        {viewMode === 'HEATMAP' && incidents.map((incident, idx) => (
+           <CircleMarker
+              key={idx}
+              center={[incident.latitude, incident.longitude]}
+              pathOptions={{ 
+                color: getIncidentColor(incident.incident_type),
+                fillColor: getIncidentColor(incident.incident_type),
+                fillOpacity: 0.5,
+                weight: 0
+              }}
+              radius={20}
+           >
+              <Popup>
+                <div className="text-slate-900 font-bold">
+                  {incident.incident_type}
+                </div>
+              </Popup>
+           </CircleMarker>
+        ))}
+
       </MapContainer>
     </div>
   );

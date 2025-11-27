@@ -232,8 +232,32 @@ func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func (h *TelemetryHandler) GetAllIncidents(c *gin.Context) {
+	rows, err := db.Pool.Query(c.Request.Context(), `
+		SELECT latitude, longitude, incident_type 
+		FROM logistics_incidents
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch incidents"})
+		return
+	}
+	defer rows.Close()
 
-
+	var result []gin.H
+	for rows.Next() {
+		var lat, lon float64
+		var iType string
+		if err := rows.Scan(&lat, &lon, &iType); err != nil {
+			continue
+		}
+		result = append(result, gin.H{
+			"latitude":      lat,
+			"longitude":     lon,
+			"incident_type": iType,
+		})
+	}
+	c.JSON(http.StatusOK, result)
+}
 
 // Define Routes
 type Route struct {
