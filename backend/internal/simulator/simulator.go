@@ -29,7 +29,7 @@ func StartSimulation() {
 	fmt.Println("Starting DEMO traffic simulation (Ilorin -> Jebba)...")
 
 	// 1. Authenticate Simulator User
-	token := loginOrRegister("simulator_admin", "sim_password")
+	token := loginOrRegister("simulator_admin@test.com", "sim_password")
 	if token == "" {
 		log.Println("Skipping simulation due to auth failure")
 		return
@@ -195,9 +195,9 @@ func handshake(shipmentID, token string) {
 	client.Do(request)
 }
 
-func loginOrRegister(username, password string) string {
+func loginOrRegister(email, password string) string {
 	// Try Login
-	payload := map[string]string{"username": username, "password": password}
+	payload := map[string]string{"email": email, "password": password}
 	body, _ := json.Marshal(payload)
 	
 	resp, err := http.Post(BaseURL+"/login", "application/json", bytes.NewBuffer(body))

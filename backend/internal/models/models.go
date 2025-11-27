@@ -52,7 +52,7 @@ type TruckStatus struct {
 
 type User struct {
 	ID       int    `json:"id"`
-	Username string `json:"username"`
+	Email string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
 }
@@ -71,7 +71,7 @@ type Shipment struct {
 }
 
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
+	Email string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	Role     string `json:"role"` // Optional for login, required/used for register
 }

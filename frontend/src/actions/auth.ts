@@ -20,7 +20,7 @@ export async function loginAction(formData: FormData) {
   try {
     const response = await fetchClient<{ token: string, user_id: string, role?: string }>("/login", {
       method: "POST",
-      body: JSON.stringify({ username: email, password: password }),
+      body: JSON.stringify({ email: email, password: password }),
     });
 
     const cookieStore = await cookies();
@@ -56,9 +56,9 @@ export async function registerAction(formData: FormData) {
     await fetchClient("/register", {
       method: "POST",
       body: JSON.stringify({ 
-        username: email, // Mapping email to username
+        email: email, 
         password: password,
-        role: role.toLowerCase() // Backend expects lowercase? Let's check. usually 'driver' or 'admin'
+        role: role.toLowerCase() 
       }),
     });
 

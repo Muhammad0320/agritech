@@ -27,7 +27,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Verify password
 	var user models.User
-	err := db.Pool.QueryRow(c.Request.Context(), "SELECT id, username, password, role FROM users WHERE username=$1", req.Username).Scan(&user.ID, &user.Username, &user.Password, &user.Role)
+	err := db.Pool.QueryRow(c.Request.Context(), "SELECT id, email, password, role FROM users WHERE email=$1", req.Email).Scan(&user.ID, &user.Email, &user.Password, &user.Role)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -79,12 +79,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// Basic validation could be added here
 	
 	var id int
-	err = db.Pool.QueryRow(c.Request.Context(), "INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id", req.Username, hashedPassword, role).Scan(&id)
+	err = db.Pool.QueryRow(c.Request.Context(), "INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id", req.Email, hashedPassword, role).Scan(&id)
 
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists or database error"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "username": req.Username, "role": role})
+	c.JSON(http.StatusCreated, gin.H{"id": id, "email": req.Email, "role": role})
 }
