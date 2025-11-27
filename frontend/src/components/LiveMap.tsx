@@ -43,7 +43,7 @@ export default function LiveMap() {
 
   useEffect(() => {
     const fetchTrucks = async () => {
-      const data = await getLiveTrucksAction();
+      const data = await getLiveTrucksAction() || [];
       
       // 1. Detect Arrivals
       const currentIds = new Set(data.map((t: any) => t.truck_id));

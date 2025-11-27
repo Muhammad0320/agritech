@@ -173,7 +173,7 @@ func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var shipments []gin.H
+	shipments := []gin.H{}
 	for rows.Next() {
 		var id, status, pickupCode string
 		var truckID *string
