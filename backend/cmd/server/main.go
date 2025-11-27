@@ -75,7 +75,6 @@ func main() {
 		api.POST("/telemetry", telemetryHandler.ReceiveTelemetry)
 		api.POST("/telemetry/incident", telemetryHandler.ReportIncident)
 		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
-		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
 		api.GET("/shipments/active", shipmentHandler.GetActiveShipments)
 		api.GET("/dashboard/summary", dashboardHandler.GetSummary) // Moved here
 	}

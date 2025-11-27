@@ -176,9 +176,6 @@ func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 	c.JSON(http.StatusOK, shipments)
 }
 
-	c.JSON(http.StatusOK, gin.H{"success": true})
-}
-
 func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
 	var req struct {
 		ShipmentID string `json:"shipment_id"`
