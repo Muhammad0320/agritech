@@ -6,8 +6,101 @@ import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, CircleMarker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
+import styled from 'styled-components';
 
-// Helper component for auto-zoom
+// --- Styled Components ---
+
+const MapWrapper = styled.div`
+  position: relative;
+  height: 100%;
+  min-height: 600px;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #334155;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  isolation: isolate;
+  background-color: #0f172a; /* Fallback background */
+`;
+
+const ToggleContainer = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+`;
+
+const ToggleButton = styled.button<{ $active: boolean; $color: string }>`
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  color: ${props => props.$active ? '#ffffff' : '#94a3b8'};
+  background-color: ${props => props.$active ? props.$color : 'transparent'};
+  box-shadow: ${props => props.$active ? `0 4px 6px -1px ${props.$color}40` : 'none'};
+
+  &:hover {
+    color: #ffffff;
+    background-color: ${props => props.$active ? props.$color : 'rgba(255, 255, 255, 0.05)'};
+  }
+`;
+
+const LegendContainer = styled.div`
+  position: absolute;
+  bottom: 30px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+`;
+
+const LegendTitle = styled.div`
+  font-weight: 700;
+  color: #f1f5f9;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+`;
+
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+`;
+
+const Dot = styled.span<{ $color: string }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: ${props => props.$color};
+  box-shadow: 0 0 8px ${props => props.$color}80;
+`;
+
+// --- Helper Component ---
+
 function ChangeView({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
   const map = useMap();
   useEffect(() => {
@@ -18,6 +111,8 @@ function ChangeView({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
   return null;
 }
 
+// --- Main Component ---
+
 export default function LiveMap() {
   const [trucks, setTrucks] = useState<any[]>([]);
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -25,7 +120,6 @@ export default function LiveMap() {
   const [isMounted, setIsMounted] = useState(false);
   const [bounds, setBounds] = useState<L.LatLngBoundsExpression | null>(null);
   
-  // Keep track of previous trucks to detect arrivals
   const prevTrucksRef = useRef<Set<string>>(new Set());
   
   useEffect(() => {
@@ -46,11 +140,9 @@ export default function LiveMap() {
     const fetchTrucks = async () => {
       const data = await getLiveTrucksAction() || [];
       
-      // 1. Detect Arrivals
       const currentIds = new Set(data.map((t: any) => t.truck_id));
       const prevIds = prevTrucksRef.current;
 
-      // If an ID was in prev but NOT in current, it arrived/finished
       prevIds.forEach(id => {
         if (!currentIds.has(id)) {
           toast.success(`Truck ${id} has arrived at destination!`, {
@@ -61,11 +153,9 @@ export default function LiveMap() {
         }
       });
 
-      // Update Ref
       prevTrucksRef.current = currentIds;
       setTrucks(data);
 
-      // Calculate Bounds
       if (data.length > 0) {
         const points: L.LatLngExpression[] = [];
         data.forEach((t: any) => {
@@ -102,9 +192,8 @@ export default function LiveMap() {
     }
   }, [viewMode]);
 
-  if (!isMounted) return <div className="h-full w-full min-h-[500px] bg-slate-900 animate-pulse rounded-xl flex items-center justify-center text-slate-500">Loading Map...</div>;
+  if (!isMounted) return <div style={{ height: '600px', width: '100%', background: '#0f172a', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading Map...</div>;
 
-  // Custom Green Pulse Icon
   const truckIcon = L.divIcon({
     className: 'custom-icon',
     html: `<div style="
@@ -121,73 +210,56 @@ export default function LiveMap() {
 
   const getIncidentColor = (type: string) => {
     switch (type) {
-      case 'POLICE_CHECKPOINT': return '#ef4444'; // Red
-      case 'BAD_ROAD': return '#a855f7'; // Purple
-      case 'TRAFFIC': return '#f59e0b'; // Orange
-      case 'ACCIDENT': return '#ef4444'; // Red
-      default: return '#3b82f6'; // Blue
+      case 'POLICE_CHECKPOINT': return '#ef4444';
+      case 'BAD_ROAD': return '#a855f7';
+      case 'TRAFFIC': return '#f59e0b';
+      case 'ACCIDENT': return '#ef4444';
+      default: return '#3b82f6';
     }
   };
 
   return (
-    <div 
-      className="relative w-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl isolate"
-      style={{ height: '100%', minHeight: '600px' }}
-    >
+    <MapWrapper>
        
-       {/* Task 3: Floating Controls (The HUD) */}
-       
-       {/* Top Right Toggle */}
-       <div 
-         className="absolute top-5 right-5 z-[1000] flex gap-1 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl"
-       >
-          <button
+       {/* Toggle Controls */}
+       <ToggleContainer>
+          <ToggleButton 
+            $active={viewMode === 'FLEET'} 
+            $color="#10b981"
             onClick={() => setViewMode('FLEET')}
-            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
-              viewMode === 'FLEET' 
-              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
           >
             <span>🚛</span> Fleet
-          </button>
-          <button
+          </ToggleButton>
+          <ToggleButton 
+            $active={viewMode === 'HEATMAP'} 
+            $color="#f97316"
             onClick={() => setViewMode('HEATMAP')}
-            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
-              viewMode === 'HEATMAP' 
-              ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
           >
             <span>⚠️</span> Risk Zones
-          </button>
-       </div>
+          </ToggleButton>
+       </ToggleContainer>
 
-       {/* Bottom Right Legend */}
-       <div 
-         className="absolute bottom-8 right-5 z-[1000] flex flex-col gap-2 p-4 rounded-xl border border-slate-700 shadow-xl backdrop-blur-md"
-         style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
-       >
-          <div className="font-bold text-slate-100 mb-1 text-sm">Map Legend</div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+       {/* Legend */}
+       <LegendContainer>
+          <LegendTitle>Map Legend</LegendTitle>
+          <LegendItem>
+            <Dot $color="#10b981" />
             <span>Active Truck Route</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+          </LegendItem>
+          <LegendItem>
+            <Dot $color="#ef4444" />
             <span>Police Checkpoint</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+          </LegendItem>
+          <LegendItem>
+            <Dot $color="#a855f7" />
             <span>Bad Road / Pothole</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+          </LegendItem>
+          <LegendItem>
+            <Dot $color="#f97316" />
             <span>Heavy Traffic</span>
-          </div>
-       </div>
+          </LegendItem>
+       </LegendContainer>
 
-       {/* Task 2: The Map Layer */}
        <MapContainer 
         center={[8.9, 4.6]} 
         zoom={7} 
@@ -205,15 +277,13 @@ export default function LiveMap() {
           const currentLat = truck.lat ?? truck.origin_lat;
           const currentLon = truck.lon ?? truck.origin_lon;
 
-          // Skip if no valid coordinates
           if (currentLat === undefined || currentLon === undefined) return null;
 
           return (
             <Fragment key={truck.shipment_id || truck.truck_id || Math.random()}>
-              {/* The Dot */}
               <Marker position={[currentLat, currentLon]} icon={truckIcon}>
                 <Popup className="font-sans">
-                  <div className="text-slate-900">
+                  <div style={{ color: '#0f172a' }}>
                     <strong>{truck.truck_id}</strong><br/>
                     Speed: {Math.round(truck.speed || 60)} km/h<br/>
                     Dest: {truck.dest_lat.toFixed(2)}, {truck.dest_lon.toFixed(2)}
@@ -221,7 +291,6 @@ export default function LiveMap() {
                 </Popup>
               </Marker>
 
-              {/* The Line to Destination */}
               <Polyline 
                 positions={[
                   [currentLat, currentLon], 
@@ -250,16 +319,20 @@ export default function LiveMap() {
               }}
               radius={12} 
            >
-              <Tooltip direction="top" offset={[0, -10]} opacity={1} className="custom-tooltip">
-                <div className="text-slate-900 text-sm font-sans">
-                  <b className="uppercase text-xs tracking-wider block mb-1">{incident.incident_type.replace('_', ' ')}</b>
-                  <span className="text-xs text-slate-600">Severity: {incident.severity || 1}/5</span>
+              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                <div style={{ color: '#0f172a', fontSize: '0.875rem' }}>
+                  <b style={{ textTransform: 'uppercase', fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>
+                    {incident.incident_type.replace('_', ' ')}
+                  </b>
+                  <span style={{ fontSize: '0.75rem', color: '#475569' }}>
+                    Severity: {incident.severity || 1}/5
+                  </span>
                 </div>
               </Tooltip>
            </CircleMarker>
         ))}
 
       </MapContainer>
-    </div>
+    </MapWrapper>
   );
 }
