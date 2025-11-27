@@ -19,11 +19,12 @@ if (typeof window !== 'undefined') {
 }
 
 const MapWrapper = styled.div`
-  height: 600px; /* Forced height */
+  height: 100%;
+  min-height: 500px;
   width: 100%;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid red; /* Temporary Debug Border */
+  border: 1px solid rgba(59, 130, 246, 0.3); /* Blue Glow */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 0;
 `;
@@ -65,8 +66,8 @@ export default function LiveMap() {
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         {(shipments || []).map((shipment) => (
           <Marker 
