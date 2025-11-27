@@ -27,8 +27,10 @@ const MapWrapper = styled.div`
 type TruckData = {
   id: string;
   truck_id: string | null;
-  lat: number;
-  lon: number;
+  lat?: number;
+  lon?: number;
+  origin_lat?: number;
+  origin_lon?: number;
   dest_lat: number;
   dest_lon: number;
   status: string;
@@ -77,14 +79,23 @@ export default function LiveMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
-        {trucks.map((truck) => (
+        {trucks.map((truck) => {
+          // Defensive check: Use lat/lon if available, else fallback to origin, else 0 (and skip)
+          const currentLat = truck.lat ?? truck.origin_lat;
+          const currentLon = truck.lon ?? truck.origin_lon;
+
+          if (currentLat === undefined || currentLon === undefined) {
+             return null; // Skip invalid trucks
+          }
+
+          return (
           <React.Fragment key={truck.id}>
             <Polyline 
-              positions={[[truck.lat, truck.lon], [truck.dest_lat, truck.dest_lon]]}
+              positions={[[currentLat, currentLon], [truck.dest_lat, truck.dest_lon]]}
               pathOptions={{ color: '#3b82f6', dashArray: '5, 10', weight: 2 }}
             />
             <Marker 
-              position={[truck.lat, truck.lon]} 
+              position={[currentLat, currentLon]} 
               icon={truckIcon}
             >
               <Popup>
@@ -100,7 +111,8 @@ export default function LiveMap() {
               </Popup>
             </Marker>
           </React.Fragment>
-        ))}
+          );
+        })}
       </MapContainer>
     </MapWrapper>
   );

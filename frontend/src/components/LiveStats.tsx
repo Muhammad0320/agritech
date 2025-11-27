@@ -117,7 +117,7 @@ export default function LiveStats() {
       />
       <StatCard 
         title="Avg Speed" 
-        value={`${summary.avg_speed} km/h`} 
+        value={`${summary.avg_speed ?? 0} km/h`} 
         icon="⚡" 
         color="amber"
       />

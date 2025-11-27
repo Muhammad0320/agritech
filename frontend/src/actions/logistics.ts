@@ -139,6 +139,7 @@ export async function getDashboardSummaryAction() {
         total_active_trucks: 0,
         total_completed_today: 0,
         alerts_count: 0,
+        avg_speed: 0,
         time_range: '24h',
         error: true // Optional flag for UI
     };
