@@ -61,7 +61,6 @@ func main() {
 	r.POST("/login", authHandler.Login)
 	r.POST("/register", authHandler.Register)
 	r.GET("/status", queryHandler.GetTruckStatus)
-	r.GET("/status", queryHandler.GetTruckStatus)
 
 	// Protected Routes
 	api := r.Group("/api")

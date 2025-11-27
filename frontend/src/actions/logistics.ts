@@ -217,3 +217,28 @@ export async function verifyShipmentAction(shipmentId: string) {
     return { success: false, error: "Failed to verify shipment" };
   }
 }
+
+export async function verifyArrivalAction(shipmentId: string, lat: number, lon: number) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+
+  try {
+    const result = await fetchClient<{ success: boolean, message?: string }>("/api/shipments/verify", {
+      method: "POST",
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: JSON.stringify({ 
+        shipment_id: shipmentId,
+        lat: lat,
+        lon: lon
+      }),
+    });
+
+    return { success: true, message: result.message };
+  } catch (error: any) {
+    console.error("Arrival verification failed:", error);
+    // Extract error message from response if possible, but fetchClient throws on non-200.
+    // We need to handle the specific error message from the backend.
+    // fetchClient implementation usually throws an error with the message.
+    return { success: false, error: error.message || "You are too far from the destination." };
+  }
+}

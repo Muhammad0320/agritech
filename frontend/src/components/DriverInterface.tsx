@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import SignOutButton from './SignOutButton';
 import styled, { keyframes, css } from 'styled-components';
-import { reportIncidentAction, joinShipmentAction, checkShipmentStatus } from '@/actions/logistics';
+import { reportIncidentAction, joinShipmentAction, checkShipmentStatus, verifyArrivalAction } from '@/actions/logistics';
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import { LoadingRow } from './Skeleton';
@@ -543,8 +543,41 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
                     </button>
                     <button 
                         onClick={() => {
-                            setShowConfirmModal(false);
-                            setShowQR(true);
+                            // 1. Get GPS
+                            if (!navigator.geolocation) {
+                                toast.error("Geolocation is required to verify arrival.");
+                                return;
+                            }
+                            
+                            const toastId = toast.loading("Verifying location...");
+                            
+                            navigator.geolocation.getCurrentPosition(async (position) => {
+                                const { latitude, longitude } = position.coords;
+                                
+                                // 2. Call Backend Verification
+                                // We need shipmentId. If missing, we can't verify.
+                                if (!shipmentId) {
+                                    toast.error("No active shipment found.", { id: toastId });
+                                    return;
+                                }
+
+                                try {
+                                    const result = await verifyArrivalAction(shipmentId, latitude, longitude);
+                                    
+                                    if (result.success) {
+                                        toast.success("Arrival Verified!", { id: toastId });
+                                        setShowConfirmModal(false);
+                                        setShowQR(true);
+                                    } else {
+                                        toast.error(result.error || "Verification Failed", { id: toastId });
+                                        setShowConfirmModal(false); // Close modal on failure so they can try again
+                                    }
+                                } catch (err) {
+                                    toast.error("System Error", { id: toastId });
+                                }
+                            }, (error) => {
+                                toast.error("Location access denied. Cannot verify arrival.", { id: toastId });
+                            });
                         }}
                         style={{
                             flex: 1,
