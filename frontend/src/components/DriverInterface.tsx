@@ -208,27 +208,14 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
   
   // Arrival & QR State
   const [showQR, setShowQR] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false); // Safety Modal
   const [shipmentId, setShipmentId] = useState<string | null>(null);
   const [isDelivered, setIsDelivered] = useState(false);
 
   // Sync prop with state
   useEffect(() => {
     setTripStarted(isTripActive);
-    // Try to recover shipment ID from cookie if possible, but for now we rely on the action response
-    // In a real app, we'd pass shipmentId as a prop too.
-    // For this demo, we'll assume the user just picked up or we need to fetch it.
-    // Let's assume we can get it from a cookie in the component or just use a placeholder if missing
-    // But wait, joinShipmentAction sets the cookie. We can't easily read it here in client component without a helper.
-    // We'll rely on the join response or a prop. 
-    // Actually, let's fetch the active shipment ID if trip is active.
     if (isTripActive) {
-        // We need the ID for the QR code. 
-        // For the hackathon, let's just use a placeholder if we don't have it, 
-        // OR better, let's fetch it.
-        // We'll skip fetching for now and rely on the join response setting it in state.
-        // If page reloads, we might lose it. 
-        // FIX: We should probably pass shipmentId as a prop.
-        // But for now, let's just use a dummy ID if missing, or try to read cookie.
         const match = document.cookie.match(new RegExp('(^| )active_shipment=([^;]+)'));
         if (match) setShipmentId(match[2]);
     }
@@ -263,12 +250,6 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
       if (result.success) {
         toast.success("Shipment Picked Up!");
         setTripStarted(true);
-        // We need to know the shipment ID for the QR code later.
-        // The action sets the cookie, so we can try to read it or update the action to return it.
-        // Let's assume the action returns it (we updated it earlier? No, we updated createShipment).
-        // Let's check joinShipmentAction... it returns success.
-        // We should update joinShipmentAction to return the ID.
-        // But for now, let's just read the cookie.
         setTimeout(() => {
             const match = document.cookie.match(new RegExp('(^| )active_shipment=([^;]+)'));
             if (match) setShipmentId(match[2]);
@@ -492,8 +473,8 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
               </ActionButton>
             </ControlPanel>
 
-            <div style={{ marginTop: '40px' }}>
-                <ShimmerButton onClick={() => setShowQR(true)}>
+            <div style={{ marginTop: '48px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px' }}>
+                <ShimmerButton onClick={() => setShowConfirmModal(true)}>
                     ARRIVED AT DESTINATION
                 </ShimmerButton>
             </div>
@@ -520,6 +501,68 @@ export default function DriverInterface({ isTripActive }: { isTripActive: boolea
           </>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100
+        }}>
+            <div style={{
+                background: '#1e293b',
+                padding: '32px',
+                borderRadius: '24px',
+                width: '90%',
+                maxWidth: '320px',
+                textAlign: 'center',
+                border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'white' }}>End Trip?</h3>
+                <p style={{ color: '#94a3b8', marginBottom: '32px' }}>
+                    This will generate the arrival QR code. This action cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                    <button 
+                        onClick={() => setShowConfirmModal(false)}
+                        style={{
+                            flex: 1,
+                            padding: '16px',
+                            background: 'transparent',
+                            border: '1px solid #334155',
+                            color: 'white',
+                            borderRadius: '12px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setShowConfirmModal(false);
+                            setShowQR(true);
+                        }}
+                        style={{
+                            flex: 1,
+                            padding: '16px',
+                            background: '#10b981',
+                            border: 'none',
+                            color: 'white',
+                            borderRadius: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </Container>
   );
 }

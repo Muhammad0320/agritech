@@ -134,7 +134,14 @@ export async function getDashboardSummaryAction() {
     return summary;
   } catch (error) {
     console.error("Failed to fetch dashboard summary:", error);
-    return null;
+    // Return a safe default state instead of null to prevent UI crash/infinite loading
+    return {
+        total_active_trucks: 0,
+        total_completed_today: 0,
+        alerts_count: 0,
+        time_range: '24h',
+        error: true // Optional flag for UI
+    };
   }
 }
 

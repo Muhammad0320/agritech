@@ -61,7 +61,7 @@ func main() {
 	r.POST("/login", authHandler.Login)
 	r.POST("/register", authHandler.Register)
 	r.GET("/status", queryHandler.GetTruckStatus)
-	r.GET("/dashboard/summary", dashboardHandler.GetSummary)
+	r.GET("/status", queryHandler.GetTruckStatus)
 
 	// Protected Routes
 	api := r.Group("/api")
@@ -75,7 +75,9 @@ func main() {
 		api.POST("/telemetry", telemetryHandler.ReceiveTelemetry)
 		api.POST("/telemetry/incident", telemetryHandler.ReportIncident)
 		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
+		api.GET("/incidents", telemetryHandler.GetRecentIncidents)
 		api.GET("/shipments/active", shipmentHandler.GetActiveShipments)
+		api.GET("/dashboard/summary", dashboardHandler.GetSummary) // Moved here
 	}
 
 	// Server Setup
