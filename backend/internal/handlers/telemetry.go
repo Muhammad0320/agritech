@@ -12,6 +12,7 @@ import (
 
 	"agri-track/internal/db"
 	"agri-track/internal/models"
+	"agri-track/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -263,9 +264,12 @@ func (h *TelemetryHandler) SimulateDemo(c *gin.Context) {
 			shipmentID := uuid.New().String()
 
 			// Create User & Truck (Ensure they exist)
+			hashedPassword, _ := utils.HashPassword("demo")
 			db.Pool.Exec(context.Background(), `
 				INSERT INTO users (id, email, password, role) 
-				VALUES ($1, $2, 'demo', 'DRIVER') ON CONFLICT (id) DO NOTHING`, truckID, fmt.Sprintf("demo%d@test.com", index))
+				VALUES ($1, $2, $3, 'DRIVER') 
+				ON CONFLICT (id) DO UPDATE SET password = EXCLUDED.password`, 
+				truckID, fmt.Sprintf("demo%d@test.com", index), hashedPassword)
 			
 			db.Pool.Exec(context.Background(), `
 				INSERT INTO trucks (id, driver_name, plate_number) 
