@@ -267,7 +267,7 @@ export async function getAllIncidentsAction() {
   const token = cookieStore.get("token")?.value;
 
   try {
-    const incidents = await fetchClient<{ latitude: number, longitude: number, incident_type: string }[]>("/api/incidents/all", {
+    const incidents = await fetchClient<{ latitude: number, longitude: number, incident_type: string, severity: number }[]>("/api/incidents/all", {
       method: "GET",
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       cache: "no-store"

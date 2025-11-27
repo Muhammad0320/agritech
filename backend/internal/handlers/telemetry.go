@@ -234,7 +234,7 @@ func (h *TelemetryHandler) GetRecentIncidents(c *gin.Context) {
 
 func (h *TelemetryHandler) GetAllIncidents(c *gin.Context) {
 	rows, err := db.Pool.Query(c.Request.Context(), `
-		SELECT latitude, longitude, incident_type 
+		SELECT latitude, longitude, incident_type, severity 
 		FROM logistics_incidents
 	`)
 	if err != nil {
@@ -247,13 +247,15 @@ func (h *TelemetryHandler) GetAllIncidents(c *gin.Context) {
 	for rows.Next() {
 		var lat, lon float64
 		var iType string
-		if err := rows.Scan(&lat, &lon, &iType); err != nil {
+		var severity int
+		if err := rows.Scan(&lat, &lon, &iType, &severity); err != nil {
 			continue
 		}
 		result = append(result, gin.H{
 			"latitude":      lat,
 			"longitude":     lon,
 			"incident_type": iType,
+			"severity":      severity,
 		})
 	}
 	c.JSON(http.StatusOK, result)
