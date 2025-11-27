@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"time"
@@ -175,6 +176,9 @@ func (h *ShipmentHandler) GetActiveShipments(c *gin.Context) {
 	c.JSON(http.StatusOK, shipments)
 }
 
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
 	var req struct {
 		ShipmentID string `json:"shipment_id"`
@@ -194,4 +198,52 @@ func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func (h *ShipmentHandler) VerifyArrival(c *gin.Context) {
+	var req struct {
+		ShipmentID string  `json:"shipment_id"`
+		Lat        float64 `json:"lat"`
+		Lon        float64 `json:"lon"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var destLat, destLon float64
+	err := db.Pool.QueryRow(c.Request.Context(), `
+		SELECT dest_lat, dest_lon FROM shipments WHERE id=$1
+	`, req.ShipmentID).Scan(&destLat, &destLon)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Shipment not found"})
+		return
+	}
+
+	// Calculate distance
+	dist := haversine(req.Lat, req.Lon, destLat, destLon)
+
+	if dist > 1000 { // 1km
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("You are too far from destination (%.2fm away)", dist)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Arrival verified"})
+}
+
+// Haversine formula to calculate distance in meters
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371000 // Earth radius in meters
+	phi1 := lat1 * (math.Pi / 180)
+	phi2 := lat2 * (math.Pi / 180)
+	deltaPhi := (lat2 - lat1) * (math.Pi / 180)
+	deltaLambda := (lon2 - lon1) * (math.Pi / 180)
+
+	a := math.Sin(deltaPhi/2)*math.Sin(deltaPhi/2) +
+		math.Cos(phi1)*math.Cos(phi2)*
+			math.Sin(deltaLambda/2)*math.Sin(deltaLambda/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return R * c
 }
