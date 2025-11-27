@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Fragment } from 'react';
 import { getLiveTrucksAction, getAllIncidentsAction } from '@/actions/logistics';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, CircleMarker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 
 // Helper component for auto-zoom
@@ -130,16 +130,51 @@ export default function LiveMap() {
   };
 
   return (
-    <div className="h-full w-full min-h-[500px] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative z-0">
-       {/* Toggle Button */}
-       <div className="absolute top-4 right-4 z-[1000]">
+    <div className="h-full w-full min-h-[500px] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative z-0 group">
+       
+       {/* Task 1: Segmented Toggle */}
+       <div className="absolute top-4 right-4 z-[1000] flex gap-1 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl">
           <button
-            onClick={() => setViewMode(prev => prev === 'FLEET' ? 'HEATMAP' : 'FLEET')}
-            className="bg-slate-900/90 backdrop-blur-md text-slate-100 px-5 py-2.5 rounded-xl border border-slate-700/50 shadow-2xl font-semibold hover:bg-slate-800/90 hover:border-slate-600 hover:shadow-emerald-500/10 transition-all duration-300 flex items-center gap-3 group"
+            onClick={() => setViewMode('FLEET')}
+            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+              viewMode === 'FLEET' 
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
           >
-            <span className={`w-2 h-2 rounded-full transition-colors duration-300 ${viewMode === 'FLEET' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]'}`}></span>
-            {viewMode === 'FLEET' ? 'Fleet View' : 'Risk Heatmap'}
+            <span>🚛</span> Fleet
           </button>
+          <button
+            onClick={() => setViewMode('HEATMAP')}
+            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+              viewMode === 'HEATMAP' 
+              ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <span>⚠️</span> Risk Zones
+          </button>
+       </div>
+
+       {/* Task 3: Legend Overlay */}
+       <div className="absolute bottom-6 right-4 z-[1000] bg-slate-900/80 backdrop-blur-md border border-slate-700 p-3 rounded-lg shadow-xl text-xs text-slate-300 space-y-2">
+          <div className="font-bold text-slate-100 mb-1">Map Legend</div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+            <span>Active Truck Route</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            <span>Police Checkpoint</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            <span>Bad Road / Pothole</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            <span>Heavy Traffic</span>
+          </div>
        </div>
 
        <MapContainer 
@@ -198,16 +233,19 @@ export default function LiveMap() {
               pathOptions={{ 
                 color: getIncidentColor(incident.incident_type),
                 fillColor: getIncidentColor(incident.incident_type),
-                fillOpacity: 0.5,
+                fillOpacity: 0.6,
                 weight: 0
               }}
-              radius={20}
+              radius={12} // Task 2: Reduced radius
            >
-              <Popup>
-                <div className="text-slate-900 font-bold">
-                  {incident.incident_type}
+              {/* Task 2: Tooltips with Severity */}
+              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
+                <div className="text-slate-900 text-sm">
+                  <b className="uppercase text-xs tracking-wider">{incident.incident_type.replace('_', ' ')}</b>
+                  <br/>
+                  <span className="text-xs text-slate-600">Severity: {incident.severity || 1}/5</span>
                 </div>
-              </Popup>
+              </Tooltip>
            </CircleMarker>
         ))}
 
