@@ -1,22 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { getLiveTrucksAction } from '@/actions/logistics';
 import styled from 'styled-components';
 
-// Fix Leaflet icon issue in Next.js
-let icon: L.Icon | undefined;
-
-if (typeof window !== 'undefined') {
-  icon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  });
-}
+// Custom Truck Icon (Green Dot with Pulse)
+const truckIcon = L.divIcon({
+  className: 'custom-icon',
+  html: `<div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px #10b981; border: 2px solid white;"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
 
 const MapWrapper = styled.div`
   height: 100%;
@@ -29,7 +24,7 @@ const MapWrapper = styled.div`
   z-index: 0;
 `;
 
-type ActiveShipment = {
+type TruckData = {
   id: string;
   truck_id: string | null;
   origin_lat: number;
@@ -38,22 +33,34 @@ type ActiveShipment = {
   dest_lon: number;
   status: string;
   pickup_code: string;
+  speed?: number; // Optional if not always present
 };
 
 export default function LiveMap() {
-  const [shipments, setShipments] = useState<ActiveShipment[]>([]);
+  const [trucks, setTrucks] = useState<TruckData[]>([]);
+  const trucksRef = useRef<TruckData[]>([]);
 
   useEffect(() => {
-    const fetchShipments = async () => {
-      const data = await getLiveTrucksAction();
-      setShipments(data);
+    const fetchTrucks = async () => {
+      try {
+        const data = await getLiveTrucksAction();
+        const safeData = data || [];
+
+        // Compare new data with old data to force re-render only if changed
+        if (JSON.stringify(safeData) !== JSON.stringify(trucksRef.current)) {
+          setTrucks(safeData);
+          trucksRef.current = safeData;
+        }
+      } catch (error) {
+        console.error("Error fetching live trucks:", error);
+      }
     };
 
     // Initial fetch
-    fetchShipments();
+    fetchTrucks();
 
-    // Poll every 5 seconds
-    const interval = setInterval(fetchShipments, 5000);
+    // Poll every 2 seconds
+    const interval = setInterval(fetchTrucks, 2000);
 
     return () => clearInterval(interval);
   }, []);
@@ -63,22 +70,29 @@ export default function LiveMap() {
       <MapContainer 
         center={[9.0820, 8.6753]} // Nigeria Center
         zoom={6} 
+        scrollWheelZoom={false}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
-        {(shipments || []).map((shipment) => (
+        {trucks.map((truck) => (
           <Marker 
-            key={shipment.id} 
-            position={[shipment.origin_lat, shipment.origin_lon]} 
-            icon={icon}
+            key={truck.id} 
+            position={[truck.origin_lat, truck.origin_lon]} 
+            icon={truckIcon}
           >
             <Popup>
-              <strong>Truck: {shipment.truck_id || 'Unassigned'}</strong><br />
-              Status: {shipment.status}<br />
-              Code: {shipment.pickup_code}
+              <div style={{ minWidth: '150px' }}>
+                <strong style={{ display: 'block', marginBottom: '4px', color: '#0f172a' }}>
+                  Truck: {truck.truck_id || 'Unassigned'}
+                </strong>
+                <div style={{ fontSize: '0.9rem', color: '#475569' }}>
+                  <div>Status: <span style={{ fontWeight: 600, color: truck.status === 'IN_TRANSIT' ? '#059669' : '#475569' }}>{truck.status}</span></div>
+                  <div>Speed: {truck.speed ? `${truck.speed} km/h` : 'N/A'}</div>
+                </div>
+              </div>
             </Popup>
           </Marker>
         ))}
