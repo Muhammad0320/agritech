@@ -209,12 +209,18 @@ func (h *ShipmentHandler) CompleteShipment(c *gin.Context) {
 		return
 	}
 
-	_, err := db.Pool.Exec(c.Request.Context(), `
-		UPDATE shipments SET status='DELIVERED', completed_at=$1 WHERE id=$2
+	result, err := db.Pool.Exec(c.Request.Context(), `
+		UPDATE shipments SET status='DELIVERED', completed_at=$1 
+		WHERE id=$2 AND status='IN_TRANSIT'
 	`, time.Now(), req.ShipmentID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete shipment"})
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Shipment not found or not in transit"})
 		return
 	}
 

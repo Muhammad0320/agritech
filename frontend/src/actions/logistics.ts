@@ -215,7 +215,7 @@ export async function verifyShipmentAction(shipmentId: string) {
     return { success: true };
   } catch (error: any) {
     console.error("Verification failed:", error);
-    return { success: false, error: "Failed to verify shipment" };
+    return { success: false, error: error.message || "Failed to verify shipment" };
   }
 }
 
