@@ -130,10 +130,17 @@ export default function LiveMap() {
   };
 
   return (
-    <div className="h-full w-full min-h-[500px] rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative z-0 group">
+    <div 
+      className="relative w-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl isolate"
+      style={{ height: '100%', minHeight: '600px' }}
+    >
        
-       {/* Task 1: Segmented Toggle */}
-       <div className="absolute top-4 right-4 z-[1000] flex gap-1 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl">
+       {/* Task 3: Floating Controls (The HUD) */}
+       
+       {/* Top Right Toggle */}
+       <div 
+         className="absolute top-5 right-5 z-[1000] flex gap-1 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-lg shadow-xl"
+       >
           <button
             onClick={() => setViewMode('FLEET')}
             className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
@@ -156,37 +163,42 @@ export default function LiveMap() {
           </button>
        </div>
 
-       {/* Task 3: Legend Overlay */}
-       <div className="absolute bottom-6 right-4 z-[1000] bg-slate-900/80 backdrop-blur-md border border-slate-700 p-3 rounded-lg shadow-xl text-xs text-slate-300 space-y-2">
-          <div className="font-bold text-slate-100 mb-1">Map Legend</div>
-          <div className="flex items-center gap-2">
+       {/* Bottom Right Legend */}
+       <div 
+         className="absolute bottom-8 right-5 z-[1000] flex flex-col gap-2 p-4 rounded-xl border border-slate-700 shadow-xl backdrop-blur-md"
+         style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+       >
+          <div className="font-bold text-slate-100 mb-1 text-sm">Map Legend</div>
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
             <span>Active Truck Route</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-red-500"></span>
             <span>Police Checkpoint</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-purple-500"></span>
             <span>Bad Road / Pothole</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-orange-500"></span>
             <span>Heavy Traffic</span>
           </div>
        </div>
 
+       {/* Task 2: The Map Layer */}
        <MapContainer 
         center={[8.9, 4.6]} 
         zoom={7} 
-        scrollWheelZoom={false} // Stops annoying zoom on scroll
-        style={{ height: "600px", width: "100%", position: 'relative', zIndex: 0 }}
+        scrollWheelZoom={false} 
+        style={{ height: "100%", width: "100%", zIndex: 0 }}
       >
         <ChangeView bounds={bounds} />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          zIndex={0}
         />
 
         {viewMode === 'FLEET' && trucks.map((truck) => {
@@ -236,13 +248,11 @@ export default function LiveMap() {
                 fillOpacity: 0.6,
                 weight: 0
               }}
-              radius={12} // Task 2: Reduced radius
+              radius={12} 
            >
-              {/* Task 2: Tooltips with Severity */}
-              <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                <div className="text-slate-900 text-sm">
-                  <b className="uppercase text-xs tracking-wider">{incident.incident_type.replace('_', ' ')}</b>
-                  <br/>
+              <Tooltip direction="top" offset={[0, -10]} opacity={1} className="custom-tooltip">
+                <div className="text-slate-900 text-sm font-sans">
+                  <b className="uppercase text-xs tracking-wider block mb-1">{incident.incident_type.replace('_', ' ')}</b>
                   <span className="text-xs text-slate-600">Severity: {incident.severity || 1}/5</span>
                 </div>
               </Tooltip>
